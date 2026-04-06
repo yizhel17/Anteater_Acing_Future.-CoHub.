@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Anteater Tutor AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="container">
+
+    <div class="header-group">
+        <div class="badge">✦ Made for UCI Anteaters</div>
+        <h1 class="english-title">
+            <span class="uci-blue">ACING YOUR</span> <span class="uci-gold">FUTURE</span>
+        </h1>
+        <p class="subtitle-main">Let's get you started.</p>
+        <p class="subtitle">Tell us where you are so we can guide you better.</p>
+    </div>
+
+    <div class="progress-wrap">
+        <div class="progress-track">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="step-labels">
+            <span class="step-label active" id="label-1">① Identity</span>
+            <span class="step-label"        id="label-2">② Your Courses</span>
+            <span class="step-label"        id="label-3">③ Your Goals</span>
+        </div>
+    </div>
+
+    <form action="/" method="POST" id="mainForm">
+
+        <div class="step" id="step-1">
+            <p class="step-question">First, who are you?</p>
+            <p class="step-hint">Pick the one that fits — we'll tailor everything from here.</p>
+
+            <div class="role-grid">
+                <label class="role-card" for="role-student">
+                    <input type="radio" id="role-student" name="role" value="student" required>
+                    <div class="check-badge">
+                        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                            <path d="M1 5L4.5 8.5L11 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="role-card-inner">
+                        <div class="role-icon">📚</div>
+                        <div class="role-title">I'm Learning</div>
+                        <div class="role-desc">I'm taking or planning to take this course and want guidance.</div>
+                        <div class="role-micro">New here? Start with guidance.</div>
+                    </div>
+                </label>
+
+                <label class="role-card" for="role-senior">
+                    <input type="radio" id="role-senior" name="role" value="senior">
+                    <div class="check-badge">
+                        <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                            <path d="M1 5L4.5 8.5L11 1" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="role-card-inner">
+                        <div class="role-icon">🎓</div>
+                        <div class="role-title">I've Taken It</div>
+                        <div class="role-desc">I've completed this course and want to help others succeed.</div>
+                        <div class="role-micro">
+    Want to give back? Share your experience.<br>
+    <span style="color: var(--accent); font-weight: 600; display: inline-block; margin-top: 6px;">
+        💼 Perks: Resume referrals & OpenAI credits
+    </span>
+</div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="nav-row justify-end">
+                <button type="button" class="btn-next" onclick="goNext(1)">
+                    Get Started <span class="arrow">→</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="step hidden" id="step-2">
+            <p class="step-question" id="s2-title">Which courses are you interested in?</p>
+            <p class="step-hint" id="s2-hint">Select all that apply — we'll create a separate hub for each one.</p>
+
+            <div class="course-search-wrap">
+                <div class="course-search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="courseSearch" placeholder="Search for a course…" autocomplete="off" oninput="filterCourses()">
+                </div>
+                <div class="division-tabs">
+                    <button type="button" class="div-tab active" data-div="all"   onclick="setDiv(this,'all')">All</button>
+                    <button type="button" class="div-tab"        data-div="lower" onclick="setDiv(this,'lower')">Lower Division</button>
+                    <button type="button" class="div-tab"        data-div="upper" onclick="setDiv(this,'upper')">Upper Division</button>
+                </div>
+            </div>
+
+            <div class="course-grid">
+                <label class="course-chip" for="c-ics31" data-div="lower" data-name="ics 31 introduction to programming"><input type="checkbox" id="c-ics31" name="courses" value="ICS 31"><span class="chip-inner"><strong>ICS 31</strong> Introduction to Programming</span></label>
+                <label class="course-chip" for="c-ics32" data-div="lower" data-name="ics 32 programming with software libraries"><input type="checkbox" id="c-ics32" name="courses" value="ICS 32"><span class="chip-inner"><strong>ICS 32</strong> Programming with Software Libraries</span></label>
+                <label class="course-chip" for="c-ics33" data-div="lower" data-name="ics 33 intermediate programming"><input type="checkbox" id="c-ics33" name="courses" value="ICS 33"><span class="chip-inner"><strong>ICS 33</strong> Intermediate Programming</span></label>
+                <label class="course-chip" for="c-ics45c" data-div="upper" data-name="ics 45c programming in c c++ as a second language"><input type="checkbox" id="c-ics45c" name="courses" value="ICS 45C"><span class="chip-inner"><strong>ICS 45C</strong> Programming in C/C++ as a Second Language</span></label>
+                <label class="course-chip" for="c-ics46" data-div="upper" data-name="ics 46 data structure implementation and analysis"><input type="checkbox" id="c-ics46" name="courses" value="ICS 46"><span class="chip-inner"><strong>ICS 46</strong> Data Structure Implementation and Analysis</span></label>
+                <label class="course-chip" for="c-ics51" data-div="upper" data-name="ics 51 introductory computer organization"><input type="checkbox" id="c-ics51" name="courses" value="ICS 51"><span class="chip-inner"><strong>ICS 51</strong> Introductory Computer Organization</span></label>
+                <label class="course-chip" for="c-math3a" data-div="lower" data-name="math 3a introduction to linear algebra"><input type="checkbox" id="c-math3a" name="courses" value="MATH 3A"><span class="chip-inner"><strong>MATH 3A</strong> Introduction to Linear Algebra</span></label>
+                <label class="course-chip" for="c-math2b" data-div="lower" data-name="math 2b single-variable calculus ii"><input type="checkbox" id="c-math2b" name="courses" value="MATH 2B"><span class="chip-inner"><strong>MATH 2B</strong> Single-Variable Calculus II</span></label>
+                <label class="course-chip other-chip" for="c-other" data-div="all" data-name="other not listed"><input type="checkbox" id="c-other" name="courses" value="Other"><span class="chip-inner">✦ &nbsp;Other / Not Listed</span></label>
+            </div>
+
+            <div class="nav-row">
+                <button type="button" class="btn-back" onclick="goBack(2)">← Back</button>
+                <button type="button" class="btn-next" onclick="goNext(2)">Next <span class="arrow">→</span></button>
+            </div>
+        </div>
+
+        <div class="step hidden" id="step-3">
+            <p class="step-question" id="s3-title">Last step — tell us about yourself.</p>
+            <p class="step-hint" id="s3-hint">The more context you give, the more precise your guide will be.</p>
+
+            <div class="field-block" id="slider-block">
+                <label class="field-label">
+                    Current confidence level
+                    <span class="slider-value" id="sliderValue">5.0 / 10</span>
+                </label>
+                <div class="slider-wrap">
+                    <span class="slider-edge">Just starting</span>
+                    <input type="range" name="confidence" min="1" max="10" step="0.5" value="5"
+                           oninput="document.getElementById('sliderValue').textContent=parseFloat(this.value).toFixed(1)+' / 10'">
+                    <span class="slider-edge">Very confident</span>
+                </div>
+            </div>
+
+            <div class="field-block">
+                <label class="field-label" id="s3-goal-label">What do you want to achieve through this / these course(s)?</label>
+                <p class="step-hint" style="margin-bottom:14px;">Select all that apply.</p>
+                
+                <div class="goal-grid" id="grid-learner">
+                    <label class="goal-chip" for="goal-a"><input type="checkbox" id="goal-a" name="goal" value="ace_grade"><span>🏆 &nbsp;Get an A</span></label>
+                    <label class="goal-chip" for="goal-b"><input type="checkbox" id="goal-b" name="goal" value="understand"><span>🧠 &nbsp;Actually understand the material</span></label>
+                    <label class="goal-chip" for="goal-c"><input type="checkbox" id="goal-c" name="goal" value="career"><span>💼 &nbsp;Build career-relevant skills</span></label>
+                    <label class="goal-chip" for="goal-d"><input type="checkbox" id="goal-d" name="goal" value="project"><span>🚀 &nbsp;Launch a real project or demo</span></label>
+                    <label class="goal-chip goal-chip-other" for="goal-e"><input type="checkbox" id="goal-e" name="goal" value="other"><span>✦ &nbsp;Others</span></label>
+                </div>
+
+                <div class="goal-grid" id="grid-senior" style="display: none;">
+                    <label class="goal-chip" for="exp-a"><input type="checkbox" id="exp-a" name="expertise" value="setup"><span>🔧 &nbsp;Environment & IDE Setup</span></label>
+                    <label class="goal-chip" for="exp-b"><input type="checkbox" id="exp-b" name="expertise" value="concepts"><span>🧠 &nbsp;Core Concept Tutoring</span></label>
+                    <label class="goal-chip" for="exp-c"><input type="checkbox" id="exp-c" name="expertise" value="exams"><span>📄 &nbsp;Exam & Syllabus Strategy</span></label>
+                    <label class="goal-chip" for="exp-d"><input type="checkbox" id="exp-d" name="expertise" value="career"><span>💼 &nbsp;Career & Project Advice</span></label>
+                    <label class="goal-chip goal-chip-other" for="exp-e"><input type="checkbox" id="exp-e" name="expertise" value="other"><span>✦ &nbsp;Other Expertise</span></label>
+                </div>
+            </div>
+
+            <div class="field-block">
+                <label class="field-label" for="user_query" id="s3-textarea-label">
+                    Anything specific on your mind?
+                    <span class="optional">(optional)</span>
+                </label>
+                <textarea id="user_query" name="user_query" rows="4" placeholder="..."></textarea>
+            </div>
+
+            <div class="nav-row">
+                <button type="button" class="btn-back" onclick="goBack(3)">← Back</button>
+                <button type="submit" class="btn-submit" id="submit-btn">Generate My Personalized Guide →</button>
+            </div>
+        </div>
+
+    </form>
+
+    <div class="ai-response" id="aiResponse">
+        <p>Your personalized guide will appear here...</p>
+    </div>
+
+</div>
+
+<script>
+const TOTAL = 3;
+
+// 预设的课程提示语库
+const placeholders = {
+    'ICS 31': 'e.g., I\'m starting ICS 31 — what Python basics should I lock in before the first lab?',
+    'ICS 32': 'e.g., I just finished ICS 31 with a B+. Nervous about IDE setup for ICS 32 — where do I start?',
+    'ICS 33': 'e.g., I\'m preparing for ICS 33, any specific Python concepts or libraries I should review first?',
+    'ICS 45C': 'e.g., I\'m coming from Python — what C++ gotchas should I watch out for in ICS 45C?',
+    'ICS 46': 'e.g., Heading into ICS 46 — which data structures trip people up the most?',
+    'ICS 51': 'e.g., I have zero hardware background. How should I prep for ICS 51\'s assembly section?',
+    'MATH 3A': 'e.g., Is MATH 3A heavy on proofs? I\'m strong at computation but weak on theory.',
+    'MATH 2B': 'e.g., I scraped through MATH 2A. How different is MATH 2B, and what should I review?',
+};
+
+// 【修复版】页面跳转控制，彻底消灭死循环Bug
+function goNext(cur) {
+    if (cur === 1 && !document.querySelector('input[name="role"]:checked'))   { shake('step-1'); return; }
+    if (cur === 2 && !document.querySelectorAll('input[name="courses"]:checked').length) { shake('step-2'); return; }
+    
+    // ✨ 动态身份变身逻辑
+    if (cur === 1) {
+        const role = document.querySelector('input[name="role"]:checked').value;
+        if (role === 'senior') {
+            document.getElementById('s2-title').innerText = "Which courses have you completed?";
+            document.getElementById('s2-hint').innerText = "Select the ones you feel confident sharing advice about.";
+            
+            document.getElementById('s3-title').innerText = "Last step — how can you help?";
+            document.getElementById('s3-hint').innerText = "Your experience is gold. Tell us what you're best at.";
+            document.getElementById('slider-block').style.display = "none"; 
+            
+            document.getElementById('s3-goal-label').innerText = "What kind of guidance can you offer?";
+            document.getElementById('grid-learner').style.display = "none"; 
+            document.getElementById('grid-senior').style.display = "grid"; 
+            
+            document.getElementById('s3-textarea-label').innerHTML = 'Any specific tips you want to share right away? <span class="optional">(optional)</span>';
+            document.getElementById('submit-btn').innerText = "Join as a Contributor →"; 
+        } else {
+            document.getElementById('s2-title').innerText = "Which courses are you interested in?";
+            document.getElementById('s2-hint').innerText = "Select all that apply — we'll create a separate hub for each one.";
+            
+            document.getElementById('s3-title').innerText = "Last step — tell us about yourself.";
+            document.getElementById('s3-hint').innerText = "The more context you give, the more precise your guide will be.";
+            document.getElementById('slider-block').style.display = "block"; 
+            
+            document.getElementById('s3-goal-label').innerText = "What do you want to achieve through this / these course(s)?";
+            document.getElementById('grid-learner').style.display = "grid"; 
+            document.getElementById('grid-senior').style.display = "none"; 
+            
+            document.getElementById('s3-textarea-label').innerHTML = 'Anything specific on your mind? <span class="optional">(optional)</span>';
+            document.getElementById('submit-btn').innerText = "Generate My Personalized Guide →"; 
+        }
+    }
+
+    if (cur === 2) updatePlaceholder();
+    switchStep(cur, cur + 1);
+}
+
+function goBack(cur) { switchStep(cur, cur - 1); }
+
+function switchStep(from, to) {
+    document.getElementById('step-' + from).classList.add('hidden');
+    const el = document.getElementById('step-' + to);
+    el.classList.remove('hidden');
+    el.classList.add('slide-in');
+    setTimeout(() => el.classList.remove('slide-in'), 400);
+    updateProgress(to);
+}
+
+function updateProgress(step) {
+    document.getElementById('progressFill').style.width = ((step-1)/(TOTAL-1)*100) + '%';
+    for (let i = 1; i <= TOTAL; i++)
+        document.getElementById('label-'+i).classList.toggle('active', i <= step);
+}
+
+function shake(id) {
+    const el = document.getElementById(id);
+    el.classList.add('shake');
+    setTimeout(() => el.classList.remove('shake'), 500);
+}
+
+// 身份选择的高亮交互
+document.querySelectorAll('input[name="role"]').forEach(input => {
+    input.addEventListener('change', () => {
+        document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected','dimmed'));
+        const picked = input.closest('.role-card');
+        picked.classList.add('selected');
+        document.querySelectorAll('.role-card').forEach(c => { if (c !== picked) c.classList.add('dimmed'); });
+    });
+});
+
+// 课程与目标选择交互
+document.querySelectorAll('.course-chip input, .goal-chip input').forEach(input => {
+    input.addEventListener('change', () => {
+        input.closest('label').classList.toggle('selected', input.checked);
+    });
+});
+
+// 滑块交互
+const slider = document.querySelector('input[type="range"]');
+function updateSliderFill() {
+    const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
+    slider.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${pct}%, var(--border-ink) ${pct}%)`;
+}
+slider.addEventListener('input', updateSliderFill);
+updateSliderFill();
+
+// 搜索栏过滤功能
+let currentDiv = 'all';
+function filterCourses() {
+    const q = document.getElementById('courseSearch').value.toLowerCase();
+    document.querySelectorAll('.course-chip').forEach(chip => {
+        const name  = chip.dataset.name  || '';
+        const div   = chip.dataset.div   || 'all';
+        const matchQ = name.includes(q);
+        const matchD = currentDiv === 'all' || div === currentDiv || div === 'all';
+        chip.style.display = (matchQ && matchD) ? '' : 'none';
+    });
+}
+function setDiv(btn, div) {
+    currentDiv = div;
+    document.querySelectorAll('.div-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterCourses();
+}
+
+// 【修复版】高阶读心术 Placeholder
+function updatePlaceholder() {
+    const checked = [...document.querySelectorAll('input[name="courses"]:checked')].map(i => i.value);
+    const ta = document.getElementById('user_query');
+    const role = document.querySelector('input[name="role"]:checked').value;
+
+    if (role === 'senior') {
+        if (checked.length > 0) {
+            ta.placeholder = `e.g., I took ${checked.join(" and ")} recently. I have a great PyCharm setup checklist and can help explain the core logic...`;
+        } else {
+            ta.placeholder = "Example: For ICS 32 Project 1, set up pylint BEFORE you start coding. It'll save you 3 hours of debugging later.\n\nYour tip (keep it short): ...";
+        }
+        return; 
+    }
+
+    if (checked.length === 0) {
+        ta.placeholder = "e.g., I just finished ICS 31 with a B+. I'm nervous about IDE setup and don't know where to start...";
+        return;
+    }
+
+    if (checked.length === 1) {
+        ta.placeholder = placeholders[checked[0]] || `e.g., I'm preparing for ${checked[0]}, what specific concepts should I review first?`;
+        return;
+    }
+
+    if (checked.length > 1) {
+        let coursesText = checked.length === 2 
+            ? checked.join(" and ") 
+            : checked.slice(0, -1).join(", ") + ", and " + checked[checked.length - 1];
+        ta.placeholder = `e.g., I'm planning to take ${coursesText} simultaneously this quarter. How should I balance the workload and what should I prioritize?`;
+    }
+}
+
+// Others 点击自动聚焦
+document.getElementById('goal-e').addEventListener('change', function() { if (this.checked) document.getElementById('user_query').focus(); });
+document.getElementById('exp-e').addEventListener('change', function() { if (this.checked) document.getElementById('user_query').focus(); });
+
+</script>
+</body>
+</html>
