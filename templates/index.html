@@ -779,8 +779,8 @@ document.getElementById('mainForm').addEventListener('submit', function(e) {
                     <pre style="background:#fff0f0;color:#c0392b;padding:14px;border-radius:8px;font-size:13px;white-space:pre-wrap;border:1px solid #fcc;overflow-x:auto">${bodyText.slice(0,1000)}</pre>
                     <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.9">
                         <strong>Most common causes:</strong><br>
-                        1. <code>CLAUDE_API_KEY</code> is empty or invalid — fill it in app.py<br>
-                        2. <code>client = Anthropic(api_key=CLAUDE_API_KEY)</code> line missing in app.py<br>
+                        1. <code>ANTHROPIC_API_KEY</code> is empty or invalid — fill it in app.py<br>
+                        2. <code>client = Anthropic(api_key=ANTHROPIC_API_KEY)</code> line missing in app.py<br>
                         3. Tavily key expired — run <code>export TAVILY_API_KEY="tvly-..."</code> before <code>python app.py</code>
                     </p>
                     <button onclick="resetToForm()" style="margin-top:16px;padding:10px 22px;background:#86351C;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">← Try Again</button>
