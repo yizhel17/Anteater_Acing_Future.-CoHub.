@@ -250,6 +250,15 @@ body {
     flex: 1; min-width: 180px;
     transition: border-color .2s, box-shadow .2s;
 }
+.trending-title {
+    font-size: 20px;
+    font-weight: 700;           /* 苹果标志性的加粗 */
+    color: var(--ink-black);    /* 纯正的黑墨色 */
+    letter-spacing: -0.2px;     /* 微调字间距，更有高级感 */
+    flex: 1;                    /* 把右边的分类按钮推过去 */
+    display: flex;
+    align-items: center;
+}
 .course-search-box:focus-within {
     border-color: var(--ink-mid);
     box-shadow: 0 0 0 3px rgba(43,43,43,0.07);
@@ -442,16 +451,128 @@ textarea:focus  { outline:none; border-color: var(--ink-black); box-shadow: 0 0 
 .btn-submit:active { transform:translateY(0) scale(.985); }
 
 /* ══════════════════════════════════════════
-   AI RESPONSE
+   AI RESPONSE CARD
 ══════════════════════════════════════════ */
-.ai-response {
-    display: none;
-    margin-top: 40px; padding: 28px;
+.ai-response-wrap {
+    margin-top: 48px;
     border: 1px solid var(--border-ink);
-    border-left: 4px solid var(--accent);
-    background: rgba(255,255,255,0.5);
-    font-size: 16px; line-height: 1.75; color: var(--ink-black);
-    border-radius: 0 var(--radius-chip) var(--radius-chip) 0;
+    border-top: 4px solid var(--accent);
+    border-radius: 0 0 var(--radius-chip) var(--radius-chip);
+    background: white;
+    overflow: hidden;
+    animation: fadeUp .4s ease;
+}
+.ai-response-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 24px;
+    background: var(--accent-bg);
+    border-bottom: 1px solid var(--border-ink);
+}
+.ai-response-icon  { font-size: 20px; }
+.ai-response-title { font-size: 15px; font-weight: 700; color: var(--accent); flex: 1; }
+.ai-response-reset {
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    color: var(--ink-mid); background: none;
+    border: 1.5px solid var(--border-ink); border-radius: 6px;
+    padding: 6px 14px; cursor: pointer;
+    transition: color .2s, border-color .2s;
+    box-shadow: none; letter-spacing: 0;
+}
+.ai-response-reset:hover { color: var(--accent); border-color: var(--accent); transform: none; box-shadow: none; }
+.ai-response-body {
+    padding: 28px 32px; font-size: 15px; line-height: 1.8; color: var(--ink-black);
+}
+.ai-response-body h3 {
+    font-size: 18px; font-weight: 800; color: var(--ink-black);
+    margin: 28px 0 12px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent-bg);
+}
+.ai-response-body h3:first-child { margin-top: 0; }
+.ai-response-body ul  { padding-left: 20px; margin: 10px 0 18px; }
+.ai-response-body li  { margin-bottom: 8px; line-height: 1.7; }
+.ai-response-body strong { color: var(--ink-black); font-weight: 700; }
+.ai-response-body em     { color: var(--ink-mid); }
+.ai-response-body hr { border: none; border-top: 1px solid var(--border-ink); margin: 24px 0; }
+.ai-response-body code {
+    background: var(--accent-bg); color: var(--accent);
+    padding: 2px 7px; border-radius: 4px; font-size: 13px;
+    font-family: 'SF Mono','Fira Code',monospace;
+}
+.ai-response-body pre {
+    background: #1a1200; border-radius: 8px;
+    padding: 16px 20px; overflow-x: auto; margin: 14px 0;
+    border: 1px solid #3a2800;
+}
+.ai-response-body pre code { background: none; color: #ffcc88; font-size: 13px; padding: 0; }
+.ai-response-body blockquote {
+    border-left: 3px solid var(--accent); margin: 14px 0;
+    padding: 10px 18px; background: var(--accent-bg);
+    border-radius: 0 6px 6px 0; font-style: italic; color: var(--ink-mid);
+}
+.ai-response-body table {
+    width: 100%; border-collapse: collapse; margin: 16px 0 24px;
+    font-size: 14px; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border-ink);
+}
+.ai-response-body th {
+    background: var(--accent-bg); color: var(--accent); font-weight: 700;
+    padding: 11px 14px; text-align: left;
+    border-bottom: 2px solid var(--accent); font-size: 13px;
+}
+.ai-response-body td {
+    padding: 11px 14px; border-bottom: 1px solid var(--border-ink);
+    vertical-align: top; line-height: 1.6;
+}
+.ai-response-body tr:last-child td { border-bottom: none; }
+.ai-response-body tr:nth-child(even) td { background: rgba(134,53,28,0.025); }
+.ai-response-body tr:hover td { background: rgba(134,53,28,0.045); }
+.ai-response-body td code { font-size: 12px; padding: 1px 6px; }
+
+/* ══════════════════════════════════════════
+   ATOM LOADER — SVG IAEA 风格
+══════════════════════════════════════════ */
+.atom-loader {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 0 48px;
+    gap: 22px;
+}
+.atom-loader.active { display: flex; }
+
+.atom-stage {
+    width: 160px;
+    height: 160px;
+}
+
+.atom-svg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    filter: drop-shadow(0 0 16px rgba(255,80,0,0.5))
+            drop-shadow(0 0 36px rgba(255,60,0,0.25));
+}
+
+.nucleus-pulse {
+    animation: nucleusPulse 1.6s ease-in-out infinite;
+    transform-origin: 100px 100px;
+}
+@keyframes nucleusPulse {
+    0%,100% { r: 20; opacity: 0.5; }
+    50%      { r: 26; opacity: 0.75; }
+}
+
+.atom-label {
+    font-size: 14px; font-weight: 600;
+    color: var(--ink-mid); letter-spacing: 0.05em;
+}
+.dot-1,.dot-2,.dot-3 { animation: dotBlink 1.2s infinite; }
+.dot-2 { animation-delay: .2s; }
+.dot-3 { animation-delay: .4s; }
+@keyframes dotBlink {
+    0%,80%,100% { opacity: 0; }
+    40%          { opacity: 1; }
 }
 
 /* ══════════════════════════════════════════
@@ -487,4 +608,395 @@ textarea:focus  { outline:none; border-color: var(--ink-black); box-shadow: 0 0 
     .btn-back  { padding: 13px 20px; font-size: 14px; }
     .btn-next  { padding: 13px 22px; font-size: 15px; }
     .btn-submit { font-size: 15px; padding: 14px 16px; }
+}
+/* ══════════════════════════════════════════
+   OTHER COURSE SEARCH WIDGET
+══════════════════════════════════════════ */
+.other-search-widget {
+    grid-column: 1 / -1;
+    position: relative;
+}
+
+.other-search-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1.5px dashed var(--border-ink);
+    border-radius: var(--radius-chip);
+    padding: 13px 16px;
+    background: white;
+    transition: border-color .2s, box-shadow .2s;
+    cursor: text;
+}
+.other-search-widget:focus-within .other-search-inner {
+    border-color: var(--accent);
+    border-style: solid;
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+
+.other-search-icon { font-size: 15px; opacity: .45; flex-shrink: 0; }
+
+.other-search-inner input {
+    border: none; outline: none; background: transparent;
+    font-size: 14px; color: var(--ink-black); font-family: inherit;
+    width: 100%;
+}
+.other-search-inner input::placeholder { color: var(--ink-light); font-style: italic; }
+
+/* Dropdown */
+.other-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
+    background: white;
+    border: 1.5px solid var(--border-ink);
+    border-radius: var(--radius-chip);
+    box-shadow: 0 8px 24px rgba(43,43,43,0.12);
+    z-index: 50;
+    overflow: hidden;
+}
+.other-dropdown.open { display: block; }
+
+.other-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--ink-mid);
+    transition: background .15s;
+}
+.other-dropdown-item:hover { background: var(--accent-bg); }
+.other-dropdown-item strong {
+    color: var(--ink-black);
+    font-weight: 700;
+    min-width: 72px;
+    flex-shrink: 0;
+}
+.other-dropdown-item span { color: var(--ink-mid); }
+.other-dropdown-item + .other-dropdown-item {
+    border-top: 1px solid var(--border-ink);
+}
+.other-dropdown-empty {
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--ink-light);
+    font-style: italic;
+}
+
+/* Selected tags */
+.other-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+.other-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-bg);
+    border: 1.5px solid var(--accent);
+    border-radius: 999px;
+    padding: 5px 10px 5px 12px;
+    font-size: 13px;
+    color: var(--ink-black);
+    box-shadow: 0 0 0 2px var(--accent-ring);
+}
+.other-tag strong { font-weight: 700; color: var(--accent); }
+.other-tag button {
+    background: none; border: none; padding: 0;
+    cursor: pointer; color: var(--ink-mid);
+    font-size: 11px; line-height: 1;
+    box-shadow: none; letter-spacing: 0;
+    font-weight: 400; font-family: inherit;
+    display: flex; align-items: center;
+    transition: color .15s;
+}
+.other-tag button:hover { color: var(--accent); transform: none; box-shadow: none; }
+/* ══════════════════════════════════════════
+   TABLE ROW ACTION MENU (Apple Liquid Glass)
+   Spec: high blur > opacity > gradient stroke
+   Ref: NNG Glassmorphism Best Practices 2024
+══════════════════════════════════════════ */
+
+/* "more..." trigger — 行 hover 时淡入的玻璃胶囊按钮 */
+.row-trigger {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    /* Liquid Glass pill */
+    background: rgba(255, 255, 255, 0.38);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+
+    /* 渐变描边 — 模拟玻璃边缘的高光折射 */
+    border: 1px solid;
+    border-color: rgba(255,255,255,0.72) rgba(255,255,255,0.28) rgba(255,255,255,0.18) rgba(255,255,255,0.48);
+    border-radius: 20px;
+
+    padding: 4px 11px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+
+    opacity: 0;
+    transition: opacity .2s, background .15s, box-shadow .15s;
+    z-index: 10;
+    line-height: 1.5;
+    font-family: inherit;
+
+    /* 内侧高光 + 外侧轻阴影 */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.75),
+                inset 0 -1px 0 rgba(0,0,0,0.04),
+                0 2px 8px rgba(43,43,43,0.10);
+}
+.ai-response-body tr:hover .row-trigger {
+    opacity: 1;
+}
+.row-trigger:hover {
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.85),
+                inset 0 -1px 0 rgba(0,0,0,0.04),
+                0 4px 14px rgba(43,43,43,0.14);
+    transform: translateY(-50%);
+}
+.row-trigger:active {
+    transform: translateY(-50%) scale(0.96);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6),
+                0 1px 4px rgba(43,43,43,0.08);
+}
+
+/* ── 毛玻璃弹窗 (Apple Liquid Glass popover) ── */
+.row-popover {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 220px;
+
+    /*
+     * 根据 NNG 文章：
+     * 1. "More blur is better" → 使用 blur(48px)，远超背景细节分辨阈值
+     * 2. opacity 控制通透感 → 宣纸白 rgba(248,244,236) + 0.72 opacity，
+     *    确保文字对比度满足 WCAG AA（深色文字在半透明浅背景上）
+     * 3. gradient stroke → 模拟玻璃四边折射率差异
+     */
+    background: rgba(248, 244, 236, 0.78);
+    backdrop-filter: blur(48px) saturate(200%) brightness(1.04);
+    -webkit-backdrop-filter: blur(48px) saturate(200%) brightness(1.04);
+
+    /* 渐变描边：顶部高光最强，底部最弱，模拟玻璃受光面 */
+    border: 1px solid;
+    border-color: rgba(255,255,255,0.80) rgba(255,255,255,0.32)
+                  rgba(255,255,255,0.18) rgba(255,255,255,0.52);
+    border-radius: 16px;
+    padding: 6px;
+
+    box-shadow:
+        /* 主阴影 */
+        0 16px 48px rgba(43, 43, 43, 0.18),
+        0 4px  12px rgba(43, 43, 43, 0.08),
+        /* 顶部内侧高光 — 模拟玻璃厚度 */
+        inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
+        /* 底部内侧暗边 */
+        inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+
+    z-index: 200;
+    animation: popoverIn .18s cubic-bezier(.34, 1.56, .64, 1);
+}
+.row-popover.open { display: block; }
+
+@keyframes popoverIn {
+    from { opacity: 0; transform: scale(0.88) translateY(-8px); }
+    to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+/* 弹窗每一项 */
+.popover-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 11px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--ink-black);
+    text-decoration: none;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    width: 100%;
+    text-align: left;
+    transition: background .12s, box-shadow .12s;
+    letter-spacing: 0;
+    box-shadow: none;
+}
+.popover-item:hover {
+    /* hover 时：淡玻璃高亮，内侧高光加强 */
+    background: rgba(134, 53, 28, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.60);
+    transform: none;
+}
+.popover-item:active {
+    background: rgba(134, 53, 28, 0.15);
+    transform: none;
+    box-shadow: none;
+}
+.popover-item-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    /* 图标轻微半透明，更有玻璃材质感 */
+    opacity: 0.85;
+}
+
+/* 分割线：半透明细线，避免实线割裂玻璃质感 */
+.popover-divider {
+    height: 1px;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(134, 53, 28, 0.15) 20%,
+        rgba(134, 53, 28, 0.15) 80%,
+        transparent
+    );
+    margin: 4px 10px;
+}
+/* ══════════════════════════════════════════
+   SECTION 2 MORE... WRAPPER（表格底部右侧）
+══════════════════════════════════════════ */
+.section-action-wrap {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    position: relative;
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+/* section 级别的触发器：常显，不依赖 hover */
+.section-trigger {
+    position: relative !important;
+    right: auto !important;
+    top: auto !important;
+    transform: none !important;
+    opacity: 1 !important;
+}
+.section-trigger:hover {
+    transform: none !important;
+}
+.section-trigger:active {
+    transform: scale(0.96) !important;
+}
+
+/* 弹窗在 section wrap 里向上弹出 */
+.section-action-wrap .row-popover {
+    top: auto;
+    bottom: calc(100% + 8px);
+    right: 0;
+}
+
+/* ══════════════════════════════════════════
+   SATISFACTION RATING
+══════════════════════════════════════════ */
+.aaf-rating {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-ink);
+    flex-wrap: wrap;
+}
+
+.aaf-rating-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-mid);
+    white-space: nowrap;
+}
+
+.aaf-rating-btns {
+    display: flex;
+    gap: 6px;
+}
+
+.aaf-rating-btn {
+    font-size: 22px;
+    background: none;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    padding: 5px 9px;
+    cursor: pointer;
+    transition: transform .15s, border-color .15s, background .15s;
+    line-height: 1;
+    box-shadow: none;
+    letter-spacing: 0;
+    font-family: inherit;
+    font-weight: 400;
+    color: inherit;
+}
+.aaf-rating-btn:hover {
+    transform: scale(1.18) translateY(-2px);
+    background: var(--accent-bg);
+    border-color: var(--accent-ring);
+    box-shadow: none;
+}
+.aaf-rating-btn.selected {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    transform: scale(1.15);
+    box-shadow: 0 0 0 3px var(--accent-ring);
+}
+.aaf-rating-btn:active {
+    transform: scale(1.05);
+}
+
+/* ── Rating: Send 按钮 ── */
+.aaf-rating-submit {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-6px);
+    transition: opacity .22s ease, transform .22s ease;
+
+    background: linear-gradient(135deg, #86351C 0%, #b84b29 100%);
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .2px;
+    padding: 6px 16px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(134,53,28,0.28);
+    margin-left: 6px;
+}
+.aaf-rating-submit.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+}
+.aaf-rating-submit:hover {
+    background: linear-gradient(135deg, #a8431f 0%, #86351C 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(134,53,28,0.38);
+}
+.aaf-rating-submit:active {
+    transform: scale(.97);
+}
+
+/* ── Rating: 感谢语 ── */
+.aaf-rating-thanks {
+    font-size: 13.5px;
+    color: var(--ink-mid);
+    font-style: italic;
+    animation: fadeUp .3s ease;
 }

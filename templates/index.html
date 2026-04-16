@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <title>Anteater Tutor AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 <div class="container">
 
     <div class="header-group">
-        <div class="badge">✦ Made for UCI Anteaters</div>
+        <div class="badge">✦ Infinite possibility ahead</div>
         <h1 class="english-title">
             <span class="uci-blue">ACING YOUR</span> <span class="uci-gold">FUTURE</span>
         </h1>
@@ -44,8 +45,8 @@
                     </div>
                     <div class="role-card-inner">
                         <div class="role-icon">📚</div>
-                        <div class="role-title">I'm Learning</div>
-                        <div class="role-desc">I'm taking or planning to take this course and want guidance.</div>
+                        <div class="role-title">Ready to Go</div>
+                        <div class="role-desc">I'm taking or planning to take these courses and want to make the most out of them.</div>
                         <div class="role-micro">New here? Start with guidance.</div>
                     </div>
                 </label>
@@ -59,12 +60,12 @@
                     </div>
                     <div class="role-card-inner">
                         <div class="role-icon">🎓</div>
-                        <div class="role-title">I've Taken It</div>
-                        <div class="role-desc">I've completed this course and want to help others succeed.</div>
+                        <div class="role-title">On the Road</div>
+                        <div class="role-desc">I've completed these courses and want to help others succeed.</div>
                         <div class="role-micro">
     Want to give back? Share your experience.<br>
     <span style="color: var(--accent); font-weight: 600; display: inline-block; margin-top: 6px;">
-        💼 Perks: Resume referrals & OpenAI credits
+        💼 Unlock benefits: Resume referrals & review. LLMs credits...
     </span>
 </div>
                     </div>
@@ -79,14 +80,12 @@
         </div>
 
         <div class="step hidden" id="step-2">
-            <p class="step-question" id="s2-title">Which courses are you interested in?</p>
+            <p class="step-question" id="s2-title">Which course(s) are you interested in?</p>
             <p class="step-hint" id="s2-hint">Select all that apply — we'll create a separate hub for each one.</p>
 
             <div class="course-search-wrap">
-                <div class="course-search-box">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="courseSearch" placeholder="Search for a course…" autocomplete="off" oninput="filterCourses()">
-                </div>
+                <div class="trending-title">Today's trending...</div>
+                
                 <div class="division-tabs">
                     <button type="button" class="div-tab active" data-div="all"   onclick="setDiv(this,'all')">All</button>
                     <button type="button" class="div-tab"        data-div="lower" onclick="setDiv(this,'lower')">Lower Division</button>
@@ -103,7 +102,22 @@
                 <label class="course-chip" for="c-ics51" data-div="upper" data-name="ics 51 introductory computer organization"><input type="checkbox" id="c-ics51" name="courses" value="ICS 51"><span class="chip-inner"><strong>ICS 51</strong> Introductory Computer Organization</span></label>
                 <label class="course-chip" for="c-math3a" data-div="lower" data-name="math 3a introduction to linear algebra"><input type="checkbox" id="c-math3a" name="courses" value="MATH 3A"><span class="chip-inner"><strong>MATH 3A</strong> Introduction to Linear Algebra</span></label>
                 <label class="course-chip" for="c-math2b" data-div="lower" data-name="math 2b single-variable calculus ii"><input type="checkbox" id="c-math2b" name="courses" value="MATH 2B"><span class="chip-inner"><strong>MATH 2B</strong> Single-Variable Calculus II</span></label>
-                <label class="course-chip other-chip" for="c-other" data-div="all" data-name="other not listed"><input type="checkbox" id="c-other" name="courses" value="Other"><span class="chip-inner">✦ &nbsp;Other / Not Listed</span></label>
+                <div class="other-search-widget" id="otherSearchWidget" data-div="all">
+                    <div class="other-search-inner" id="otherSearchInner">
+                        <span class="other-search-icon">🔎</span>
+                        <input
+                            type="text"
+                            id="otherCourseInput"
+                            placeholder="Search any UCI course… (e.g. mat, law, lin)"
+                            autocomplete="off"
+                            oninput="handleOtherSearch(this.value)"
+                            onfocus="showOtherDropdown()"
+                        >
+                    </div>
+                    <div class="other-dropdown" id="otherDropdown"></div>
+                    <div class="other-tags" id="otherTags"></div>
+                    <div id="otherHiddenInputs"></div>
+                </div>
             </div>
 
             <div class="nav-row">
@@ -134,7 +148,7 @@
                 <p class="step-hint" style="margin-bottom:14px;">Select all that apply.</p>
                 
                 <div class="goal-grid" id="grid-learner">
-                    <label class="goal-chip" for="goal-a"><input type="checkbox" id="goal-a" name="goal" value="ace_grade"><span>🏆 &nbsp;Get an A</span></label>
+                    <label class="goal-chip" for="goal-a"><input type="checkbox" id="goal-a" name="goal" value="ace_grade"><span>🏆 &nbsp;Get an A+/A the most feasible way</span></label>
                     <label class="goal-chip" for="goal-b"><input type="checkbox" id="goal-b" name="goal" value="understand"><span>🧠 &nbsp;Actually understand the material</span></label>
                     <label class="goal-chip" for="goal-c"><input type="checkbox" id="goal-c" name="goal" value="career"><span>💼 &nbsp;Build career-relevant skills</span></label>
                     <label class="goal-chip" for="goal-d"><input type="checkbox" id="goal-d" name="goal" value="project"><span>🚀 &nbsp;Launch a real project or demo</span></label>
@@ -142,10 +156,10 @@
                 </div>
 
                 <div class="goal-grid" id="grid-senior" style="display: none;">
-                    <label class="goal-chip" for="exp-a"><input type="checkbox" id="exp-a" name="expertise" value="setup"><span>🔧 &nbsp;Environment & IDE Setup</span></label>
-                    <label class="goal-chip" for="exp-b"><input type="checkbox" id="exp-b" name="expertise" value="concepts"><span>🧠 &nbsp;Core Concept Tutoring</span></label>
-                    <label class="goal-chip" for="exp-c"><input type="checkbox" id="exp-c" name="expertise" value="exams"><span>📄 &nbsp;Exam & Syllabus Strategy</span></label>
-                    <label class="goal-chip" for="exp-d"><input type="checkbox" id="exp-d" name="expertise" value="career"><span>💼 &nbsp;Career & Project Advice</span></label>
+                    <label class="goal-chip" for="exp-a"><input type="checkbox" id="exp-a" name="expertise" value="setup"><span>🔧 &nbsp;IDE Setup & GitHub Integration (Pre-class Checklist)</span></label>
+                    <label class="goal-chip" for="exp-b"><input type="checkbox" id="exp-b" name="expertise" value="concepts"><span>🧠 &nbsp;Explaining hard concepts</span></label>
+                    <label class="goal-chip" for="exp-c"><input type="checkbox" id="exp-c" name="expertise" value="exams"><span>📄 &nbsp;Exams Strategy & Syllabus Guidance</span></label>
+                    <label class="goal-chip" for="exp-d"><input type="checkbox" id="exp-d" name="expertise" value="career"><span>💼 &nbsp;Careerpath & Projects Advice (LinkedIn experiences)</span></label>
                     <label class="goal-chip goal-chip-other" for="exp-e"><input type="checkbox" id="exp-e" name="expertise" value="other"><span>✦ &nbsp;Other Expertise</span></label>
                 </div>
             </div>
@@ -166,8 +180,82 @@
 
     </form>
 
-    <div class="ai-response" id="aiResponse">
-        <p>Your personalized guide will appear here...</p>
+    {% if ai_response %}
+    <script id="aaf-data" type="application/json">{{ ai_response | tojson }}</script>
+    {% endif %}
+
+    <!-- ── 原子加载动画（IAEA 风格 SVG）── -->
+    <div class="atom-loader" id="atomLoader">
+        <div class="atom-stage">
+            <svg class="atom-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <filter id="glow-nucleus" x="-80%" y="-80%" width="360%" height="360%">
+                        <feGaussianBlur stdDeviation="6" result="b1"/>
+                        <feGaussianBlur stdDeviation="3" result="b2" in="SourceGraphic"/>
+                        <feMerge><feMergeNode in="b1"/><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="glow-orbit" x="-30%" y="-200%" width="160%" height="500%">
+                        <feGaussianBlur stdDeviation="2.5" result="b"/>
+                        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <filter id="glow-electron" x="-150%" y="-150%" width="400%" height="400%">
+                        <feGaussianBlur stdDeviation="4" result="b"/>
+                        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                    <!-- 单条 base 轨道路径（三个电子共用，各自在旋转的 g 组里跑） -->
+                    <path id="ep-base" d="M158,100 A58,21 0 0,1 42,100 A58,21 0 0,1 158,100" fill="none"/>
+                </defs>
+                <!-- 深色背景 -->
+                <circle cx="100" cy="100" r="97" fill="#080200"/>
+                <!-- 轨道（底层暗色 + 发光层） -->
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#6b2200" stroke-width="1.2"/>
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#6b2200" stroke-width="1.2" transform="rotate(60,100,100)"/>
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#6b2200" stroke-width="1.2" transform="rotate(-60,100,100)"/>
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#ff5500" stroke-width="1.8" opacity="0.75" filter="url(#glow-orbit)"/>
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#ff5500" stroke-width="1.8" opacity="0.75" filter="url(#glow-orbit)" transform="rotate(60,100,100)"/>
+                <ellipse cx="100" cy="100" rx="58" ry="21" fill="none" stroke="#ff5500" stroke-width="1.8" opacity="0.75" filter="url(#glow-orbit)" transform="rotate(-60,100,100)"/>
+                <!-- 原子核（多层叠加发光）-->
+                <circle cx="100" cy="100" r="20" fill="#cc3300" filter="url(#glow-nucleus)" opacity="0.5" class="nucleus-pulse"/>
+                <circle cx="100" cy="100" r="13" fill="#ff5500" filter="url(#glow-orbit)" opacity="0.9"/>
+                <circle cx="100" cy="100" r="9"  fill="#ff8800"/>
+                <circle cx="100" cy="100" r="6"  fill="#ffbb00"/>
+                <circle cx="100" cy="100" r="3"  fill="#fff5cc"/>
+                <!-- 电子 1 — 在 0° 轨道上独立运行 -->
+                <g transform="rotate(0,100,100)">
+                    <circle r="5" fill="#ffdd33" filter="url(#glow-electron)">
+                        <animateMotion dur="1.85s" repeatCount="indefinite"
+                            path="M158,100 A58,21 0 0,1 42,100 A58,21 0 0,1 158,100"/>
+                    </circle>
+                </g>
+
+                <!-- 电子 2 — 在 60° 轨道上独立运行 -->
+                <g transform="rotate(60,100,100)">
+                    <circle r="5" fill="#ffdd33" filter="url(#glow-electron)">
+                        <animateMotion dur="2.65s" repeatCount="indefinite" begin="0.7s"
+                            path="M158,100 A58,21 0 0,1 42,100 A58,21 0 0,1 158,100"/>
+                    </circle>
+                </g>
+
+                <!-- 电子 3 — 在 -60° 轨道上独立运行 -->
+                <g transform="rotate(-60,100,100)">
+                    <circle r="5" fill="#ffdd33" filter="url(#glow-electron)">
+                        <animateMotion dur="1.45s" repeatCount="indefinite" begin="1.3s"
+                            path="M158,100 A58,21 0 0,1 42,100 A58,21 0 0,1 158,100"/>
+                    </circle>
+                </g>
+            </svg>
+        </div>
+        <p class="atom-label">Pulling from the hive mind<span class="dot-1">.</span><span class="dot-2">.</span><span class="dot-3">.</span></p>
+    </div>
+
+    <!-- ── AI 结果卡片 ── -->
+    <div class="ai-response-wrap" id="aafResult" style="display:none">
+        <div class="ai-response-header">
+            <span class="ai-response-icon">🐜</span>
+            <span class="ai-response-title">Your Personalized Guide</span>
+            <button class="ai-response-reset" onclick="resetToForm()">← New Guide</button>
+        </div>
+        <div class="ai-response-body" id="aafBody"></div>
     </div>
 
 </div>
@@ -175,54 +263,123 @@
 <script>
 const TOTAL = 3;
 
-// 预设的课程提示语库
 const placeholders = {
-    'ICS 31': 'e.g., I\'m starting ICS 31 — what Python basics should I lock in before the first lab?',
-    'ICS 32': 'e.g., I just finished ICS 31 with a B+. Nervous about IDE setup for ICS 32 — where do I start?',
-    'ICS 33': 'e.g., I\'m preparing for ICS 33, any specific Python concepts or libraries I should review first?',
-    'ICS 45C': 'e.g., I\'m coming from Python — what C++ gotchas should I watch out for in ICS 45C?',
-    'ICS 46': 'e.g., Heading into ICS 46 — which data structures trip people up the most?',
-    'ICS 51': 'e.g., I have zero hardware background. How should I prep for ICS 51\'s assembly section?',
-    'MATH 3A': 'e.g., Is MATH 3A heavy on proofs? I\'m strong at computation but weak on theory.',
-    'MATH 2B': 'e.g., I scraped through MATH 2A. How different is MATH 2B, and what should I review?',
+    'ICS 31': 'e.g., I\'m taking ICS 31 this quarter — How \'s the general course structure? I once heard that it\'s quite challenging for people who have no prior programming experience. Is that true? What Python basics should I lock in before the first lab?',
+    
+    'ICS 32': 'e.g., I just finished ICS 31 with a B+. Struggling with IDE setup for ICS 32 — where do I start? I just checked the syllabus, and it says we need to be using git and github. What are they? Such a huge transition, is there any specific tools or libraries I should get familiar with before the quarter starts?',
+    
+    'ICS 33': 'e.g., Taking ICS 33 next quarter! I know the jump from 32 is huge and involves a lot of OOP, generators, and iterators. Are the projects as insane as people say? Is reviewing Pattis\'s old notes actually worth it, and how should I prep my Python skills?',
+    
+    'ICS 45C': 'e.g., I\'m transitioning from Python in ICS 33 to C++ in 45C. Everyone says memory management and pointers are a nightmare. What\'s the deal with Valgrind and memory leaks? Any specific C++ syntax I should practice before Week 1?',
+    
+    'ICS 46': 'e.g., Heading into ICS 46 and honestly a bit terrified. I hear AVL trees, hash tables, and graphs are brutal to implement in C++. Which data structures trip people up the most? Should I start reviewing Big O notation now?',
+    
+    'ICS 51': 'e.g., I have zero hardware background and ICS 51 is my first exposure to assembly language (x86/MIPS) and caching. It feels like a completely different mindset from Python/C++. How should I prep for the assembly section to not fall behind?',
+    
+    'MATH 3A': 'e.g., Is MATH 3A super heavy on proofs? I\'m pretty strong at computation but weak on theoretical math and linear transformations. How different is it from the Calculus series, and what\'s the best way to study for the midterms?',
+    
+    'MATH 2B': 'e.g., I barely scraped through MATH 2A. Everyone says MATH 2B (Integrals and Taylor Series) is the ultimate weed-out class at UCI and the common final is insanely hard. How different is it from 2A, and what\'s the best way to survive it?',
+    
+    'COMPSCI 161': 'e.g., CS 161 is such a biggest fear. Dynamic Programming and the Master Theorem make zero sense to me. How do people actually practice for Eppstein/Goodrich\'s brutal exams?',
+    
+    'COMPSCI 122A': 'e.g., Taking CS 122A (Carey). The relational algebra and E-R diagrams look like a totally different language from SQL. Does anyone have tips for the midterm?',
+    'ICS 53': 'e.g., Heading into ICS 53 with Harris. I hear the C programming and socket/server multi-threading projects are absolute nightmare fuel. How do I survive this class?',
+    'STATS 67': 'e.g., Taking Stats 67. I haven\'t done stats since high school. Is it heavy on calculus, or more about discrete probability and Bayes\' Theorem?',
+
+    
+    'MATH 2A': 'e.g., Taking Math 2A this quarter. I think I kinda forget some of the calculus basics. How do I survive the related rates and optimization word problems? Is the common final really that bad?',
+    'PHYSICS 7C': 'e.g., Physics 7C is destroying me. The MasteringPhysics homework takes hours and the midterm averages are so low. How do I actually understand rotational kinematics and torque?',
+    'CHEM 1A': 'e.g., Freshman taking Chem 1A (Arasasingham). The ALEKS homework modules are endless. Is the curve generous, and what should I strictly focus on for the final?',
+    'CHEM 51A': 'e.g., Starting O-Chem (Chem 51A) with King. I\'m terrified. How do you even begin to memorize all the nomenclature, stereochemistry, and resonance structures?',
+    'BIO SCI 93': 'e.g., Bio 93 with the Trio. There is so much textbook material. Do I need to memorize every single protein pathway and cell cycle detail, or just the big picture?',
+
+    
+    'WRITING 39B': 'e.g., Writing 39B (WR 50) requires so much reading. I\'m struggling with the Rhetorical Analysis (RA) essay. What exactly are the instructors looking for in the rubric?',
+    'WRITING 39C': 'e.g., Writing 39C (WR 60) HCP and AP essays seem impossible. How do I find good peer-reviewed sources without spending 20 hours digging through the library databases?',
+    'ECON 20A': 'e.g., Taking Microeconomics (Econ 20A). The supply/demand shift graphs are confusing me. Does anyone have a good strategy for multiple-choice questions on the midterms?'
 };
 
-// 【修复版】页面跳转控制，彻底消灭死循环Bug
+// 🌟 新增：专属学长学姐 (Senior) 的硬核经验 Placeholder (注入真实 UCI 校园文化)
+const seniorPlaceholders = {
+    'ICS 31': 'e.g., I know Zybooks can feel tedious, but don\'t skip the participation activities! I have a solid cheat sheet for string formatting and list slicing that saved me on the midterm...',
+    
+    'ICS 32': 'e.g., The jump from 31 is real. I spent 10 hours just trying to get Git and my virtual environment working for Project 1. I made a step-by-step dummy guide for setting up PyCharm and handling API requests so you don\'t lose your mind...',
+    
+    'ICS 33': 'e.g., Survived Pattis! Honestly, reading his 50-page notes is mandatory, not optional. I can show you how to write test cases effectively before coding the massive projects, and explain generators in plain English...',
+    
+    'ICS 45C': 'e.g., C++ will humble you if you\'re coming from Python. Segfaults are brutal. I have a 1-pager on exactly how to read Valgrind errors and a visual guide to pointers vs. references that got me through Thornton\'s projects...',
+    
+    'ICS 46': 'e.g., Honestly, the graph and maze projects almost broke me. My biggest piece of advice is to literally draw the AVL tree rotations on a whiteboard. I can share my study guide for the Big-O proofs and hash table collisions...',
+    
+    'ICS 51': 'e.g., Everyone bombs the first x86 assembly midterm, it\'s basically a rite of passage. I figured out a really mechanical way to trace registers and calculate cache hits/misses that makes the final way less intimidating...',
+    
+    'MATH 3A': 'e.g., The first few weeks of row reduction trick you into thinking it\'s an easy A, then you hit vector spaces and proofs. I can help explain eigenvalues geometrically rather than just giving you the formulas to memorize...',
+    
+    'MATH 2B': 'e.g., The legendary UCI weed-out class... I clutched the common final. I have a giant flowchart for knowing exactly which integration technique to use, and a cheat sheet for Taylor Series convergence tests...',
+    
+    'COMPSCI 161': 'e.g., CS 161 is pure logic. I have a GitHub repo of practice problems specifically for Dynamic Programming and a foolproof way to solve recurrence relations...',
+    'COMPSCI 122A': 'e.g., I mastered Carey\'s 122A! I can share my translation guide from SQL to Relational Algebra and tips on how to structure your E-R diagrams perfectly...',
+    'ICS 53': 'e.g., ICS 53 is a beast. I have a step-by-step guide on how to actually debug the multi-threading and socket programming projects without crashing the server...',
+    'STATS 67': 'e.g., Stats 67 is super useful for SWE interviews. I have a cheat sheet comparing all the distributions (Poisson, Binomial, Normal) so you know exactly when to use which...',
+
+    
+    'MATH 2A': 'e.g., I have the ultimate Math 2A survival guide. I can share past common finals and break down exactly how to approach the optimization and limits problems...',
+    'PHYSICS 7C': 'e.g., Physics 7C is all about free body diagrams. I can show you the exact step-by-step mechanical method to break down any force, friction, or torque problem...',
+    'CHEM 1A': 'e.g., Survived Gen Chem! I have a whole folder of practice midterms and a strategy for getting through the ALEKS modules efficiently without losing sleep...',
+    'CHEM 51A': 'e.g., O-Chem isn\'t about memorization, it\'s about patterns! I have the perfect flashcard setup for functional groups and electron-pushing arrows...',
+    'BIO SCI 93': 'e.g., I aced Bio 93! Don\'t read the textbook word-for-word. I can share my Anki decks for the cell cycle and genetics that cover 90% of the midterm questions...',
+
+    
+    'WRITING 39B': 'e.g., Writing 39B is all about writing to the rubric. I can share my A-grade Rhetorical Analysis essay and show you how to structure a bulletproof thesis statement...',
+    'WRITING 39C': 'e.g., I mastered the Writing 39C research process. I have a complete guide on how to abuse UCI Library\'s Advanced Search and synthesize sources quickly...',
+    'ECON 20A': 'e.g., I can help you ace Econ 20A. I have a summary sheet that explains every market structure (Monopoly, Oligopoly, etc.) and how deadweight loss shifts...'
+};
+
+// 🌟 新增：多门课程组合的专属 Placeholder (包含两门课和三门课的经典死亡组合)
+const comboPlaceholders = {
+    // 学生版：多门课组合焦虑
+    'ICS 31|MATH 2B': 'e.g., I\'m taking ICS 31 and MATH 2B together. I\'ve heard Math 2B takes up a ton of time with WebWork and the common final. How should I balance studying for integrals while keeping up with Python labs?',
+    'ICS 32|MATH 2B': 'e.g., ICS 32 and MATH 2B in the same quarter... I know Thornton\'s projects are massive and 2B is the ultimate weed-out. Any tips on time management so I don\'t burn out by Week 5?',
+    'ICS 46|ICS 51': 'e.g., Taking ICS 46 and ICS 51 together. Balancing C++ data structures and Assembly language sounds like a nightmare. How do I context-switch between high-level and hardware-level coding without mixing them up?',
+    'ICS 33|ICS 45C|MATH 3A': 'e.g., Planning to take ICS 33, 45C, and MATH 3A simultaneously. Is this academic suicide? How do I manage Pattis\'s heavy projects, C++ memory leaks, and linear algebra all at once without dropping my GPA?'
+};
+
+const seniorComboPlaceholders = {
+    // 学长学姐版：多门课平衡攻略
+    'ICS 31|MATH 2B': 'e.g., I survived the ICS 31 + Math 2B combo! My best advice is to front-load the Python labs on weekends so you can dedicate weeknights strictly to Math 2B practice problems...',
+    'ICS 32|MATH 2B': 'e.g., Balancing ICS 32 and Math 2B is brutal but doable. I have a Notion template for scheduling Thornton\'s projects around 2B midterm weeks. I can show you how to prioritize...',
+    'ICS 46|ICS 51': 'e.g., The 46 + 51 gauntlet! I can show you how to structure your week so you aren\'t doing Assembly and C++ on the same day. I have solid study guides for both...',
+    'ICS 33|ICS 45C|MATH 3A': 'e.g., I took a crazy heavy course load like this before. The secret is starting projects the day they drop. I can share my calendar blocking strategy and how to study efficiently for Math 3A matrices...'
+};
+
 function goNext(cur) {
     if (cur === 1 && !document.querySelector('input[name="role"]:checked'))   { shake('step-1'); return; }
     if (cur === 2 && !document.querySelectorAll('input[name="courses"]:checked').length) { shake('step-2'); return; }
     
-    // ✨ 动态身份变身逻辑
     if (cur === 1) {
         const role = document.querySelector('input[name="role"]:checked').value;
         if (role === 'senior') {
-            document.getElementById('s2-title').innerText = "Which courses have you completed?";
+            document.getElementById('s2-title').innerText = "Which course(s) have you completed?";
             document.getElementById('s2-hint').innerText = "Select the ones you feel confident sharing advice about.";
-            
             document.getElementById('s3-title').innerText = "Last step — how can you help?";
             document.getElementById('s3-hint').innerText = "Your experience is gold. Tell us what you're best at.";
             document.getElementById('slider-block').style.display = "none"; 
-            
             document.getElementById('s3-goal-label').innerText = "What kind of guidance can you offer?";
             document.getElementById('grid-learner').style.display = "none"; 
             document.getElementById('grid-senior').style.display = "grid"; 
-            
             document.getElementById('s3-textarea-label').innerHTML = 'Any specific tips you want to share right away? <span class="optional">(optional)</span>';
-            document.getElementById('submit-btn').innerText = "Join as a Contributor →"; 
+            document.getElementById('submit-btn').innerText = "Save My Experience to the Hive →"; 
         } else {
-            document.getElementById('s2-title').innerText = "Which courses are you interested in?";
+            document.getElementById('s2-title').innerText = "Which course(s) are you interested in?";
             document.getElementById('s2-hint').innerText = "Select all that apply — we'll create a separate hub for each one.";
-            
-            document.getElementById('s3-title').innerText = "Last step — tell us about yourself.";
+            document.getElementById('s3-title').innerText = "Future Prospects — share your plans with us.";
             document.getElementById('s3-hint').innerText = "The more context you give, the more precise your guide will be.";
             document.getElementById('slider-block').style.display = "block"; 
-            
             document.getElementById('s3-goal-label').innerText = "What do you want to achieve through this / these course(s)?";
             document.getElementById('grid-learner').style.display = "grid"; 
             document.getElementById('grid-senior').style.display = "none"; 
-            
             document.getElementById('s3-textarea-label').innerHTML = 'Anything specific on your mind? <span class="optional">(optional)</span>';
-            document.getElementById('submit-btn').innerText = "Generate My Personalized Guide →"; 
+            document.getElementById('submit-btn').innerText = "Map My Quarter →"; 
         }
     }
 
@@ -253,24 +410,24 @@ function shake(id) {
     setTimeout(() => el.classList.remove('shake'), 500);
 }
 
-// 身份选择的高亮交互
 document.querySelectorAll('input[name="role"]').forEach(input => {
     input.addEventListener('change', () => {
         document.querySelectorAll('.role-card').forEach(c => c.classList.remove('selected','dimmed'));
         const picked = input.closest('.role-card');
         picked.classList.add('selected');
         document.querySelectorAll('.role-card').forEach(c => { if (c !== picked) c.classList.add('dimmed'); });
+        
+        // 🌟 新增：切换身份时，瞬间清空文本框，防止串戏
+        document.getElementById('user_query').value = '';
     });
 });
 
-// 课程与目标选择交互
 document.querySelectorAll('.course-chip input, .goal-chip input').forEach(input => {
     input.addEventListener('change', () => {
         input.closest('label').classList.toggle('selected', input.checked);
     });
 });
 
-// 滑块交互
 const slider = document.querySelector('input[type="range"]');
 function updateSliderFill() {
     const pct = ((slider.value - slider.min) / (slider.max - slider.min)) * 100;
@@ -279,10 +436,9 @@ function updateSliderFill() {
 slider.addEventListener('input', updateSliderFill);
 updateSliderFill();
 
-// 搜索栏过滤功能
 let currentDiv = 'all';
 function filterCourses() {
-    const q = document.getElementById('courseSearch').value.toLowerCase();
+    const q = document.getElementById('courseSearch') ? document.getElementById('courseSearch').value.toLowerCase() : '';
     document.querySelectorAll('.course-chip').forEach(chip => {
         const name  = chip.dataset.name  || '';
         const div   = chip.dataset.div   || 'all';
@@ -298,21 +454,45 @@ function setDiv(btn, div) {
     filterCourses();
 }
 
-// 【修复版】高阶读心术 Placeholder
 function updatePlaceholder() {
-    const checked = [...document.querySelectorAll('input[name="courses"]:checked')].map(i => i.value);
+    // 1. 获取常规卡片勾选的课程
+    const normalChecked = [...document.querySelectorAll('input[name="courses"][type="checkbox"]:checked')].map(i => i.value);
+    // 2. 获取通过搜索框添加的隐藏课程
+    const customChecked = Array.from(otherSelectedCourses);
+    // 3. 将两者完美合并！
+    const checked = [...normalChecked, ...customChecked];
+    
     const ta = document.getElementById('user_query');
     const role = document.querySelector('input[name="role"]:checked').value;
 
+    // 👇 就是漏了这极其关键的一行！把选中的课组合成指纹密码 (例如: "ICS 31|ECON 20A")
+    const comboKey = [...checked].sort().join('|');
+
+    // 🌟 学长学姐专属逻辑
     if (role === 'senior') {
-        if (checked.length > 0) {
-            ta.placeholder = `e.g., I took ${checked.join(" and ")} recently. I have a great PyCharm setup checklist and can help explain the core logic...`;
-        } else {
+        if (checked.length === 0) {
             ta.placeholder = "Example: For ICS 32 Project 1, set up pylint BEFORE you start coding. It'll save you 3 hours of debugging later.\n\nYour tip (keep it short): ...";
+            return; 
         }
-        return; 
+        if (checked.length === 1) {
+            ta.placeholder = seniorPlaceholders[checked[0]] || `e.g., I took ${checked[0]} recently and can help explain the core concepts...`;
+            return;
+        }
+        if (checked.length > 1) {
+            // 先尝试匹配预设的"死亡组合"，匹配不到再用通用的多门课话术
+            if (seniorComboPlaceholders[comboKey]) {
+                ta.placeholder = seniorComboPlaceholders[comboKey];
+            } else {
+                let coursesText = checked.length === 2 
+                    ? checked.join(" and ") 
+                    : checked.slice(0, -1).join(", ") + ", and " + checked[checked.length - 1];
+                ta.placeholder = `e.g., I survived taking ${coursesText} simultaneously. I have some great time-management strategies and calendar blocking tips to help you balance the workload...`;
+            }
+            return;
+        }
     }
 
+    // 🎓 新生专属逻辑
     if (checked.length === 0) {
         ta.placeholder = "e.g., I just finished ICS 31 with a B+. I'm nervous about IDE setup and don't know where to start...";
         return;
@@ -324,16 +504,599 @@ function updatePlaceholder() {
     }
 
     if (checked.length > 1) {
-        let coursesText = checked.length === 2 
-            ? checked.join(" and ") 
-            : checked.slice(0, -1).join(", ") + ", and " + checked[checked.length - 1];
-        ta.placeholder = `e.g., I'm planning to take ${coursesText} simultaneously this quarter. How should I balance the workload and what should I prioritize?`;
+        // 先尝试匹配预设的"死亡组合"，匹配不到再用通用的多门课话术
+        if (comboPlaceholders[comboKey]) {
+            ta.placeholder = comboPlaceholders[comboKey];
+        } else {
+            let coursesText = checked.length === 2 
+                ? checked.join(" and ") 
+                : checked.slice(0, -1).join(", ") + ", and " + checked[checked.length - 1];
+            ta.placeholder = `e.g., I'm planning to take ${coursesText} simultaneously this quarter. How should I schedule my week to balance the heavy project workload with the math midterms?`;
+        }
     }
 }
 
-// Others 点击自动聚焦
 document.getElementById('goal-e').addEventListener('change', function() { if (this.checked) document.getElementById('user_query').focus(); });
 document.getElementById('exp-e').addEventListener('change', function() { if (this.checked) document.getElementById('user_query').focus(); });
+
+// ══════════════════════════════════════════════════════
+//  UCI COURSE SEARCH ENGINE
+// ══════════════════════════════════════════════════════
+const UCI_COURSES = [
+    {code:'ICS 10',   dept:'ics',     name:'How Computers Work without Programming'},
+    {code:'ICS 31',   dept:'ics',     name:'Introduction to Programming'},
+    {code:'ICS 32',   dept:'ics',     name:'Programming with Software Libraries'},
+    {code:'ICS 33',   dept:'ics',     name:'Intermediate Programming'},
+    {code:'ICS 45C',  dept:'ics',     name:'Programming in C/C++ as a Second Language'},
+    {code:'ICS 45J',  dept:'ics',     name:'Programming in Java as a Second Language'},
+    {code:'ICS 46',   dept:'ics',     name:'Data Structure Implementation and Analysis'},
+    {code:'ICS 51',   dept:'ics',     name:'Introductory Computer Organization'},
+    {code:'ICS 53',   dept:'ics',     name:'Principles in System Design'},
+    {code:'ICS 60',   dept:'ics',     name:'Game Systems and Design'},
+    {code:'COMPSCI 101',  dept:'cs compsci', name:'Computing Technologies and Society'},
+    {code:'COMPSCI 121',  dept:'cs compsci', name:'Software Design'},
+    {code:'COMPSCI 122A', dept:'cs compsci', name:'Introduction to Data Management'},
+    {code:'COMPSCI 122B', dept:'cs compsci', name:'Project in Databases and Web Applications'},
+    {code:'COMPSCI 131',  dept:'cs compsci', name:'Programming Languages'},
+    {code:'COMPSCI 132',  dept:'cs compsci', name:'Computer Networks'},
+    {code:'COMPSCI 141',  dept:'cs compsci', name:'Concepts in Programming Languages'},
+    {code:'COMPSCI 142A', dept:'cs compsci', name:'Compilers and Interpreters'},
+    {code:'COMPSCI 143A', dept:'cs compsci', name:'Principles of Operating Systems'},
+    {code:'COMPSCI 161',  dept:'cs compsci', name:'Design and Analysis of Algorithms'},
+    {code:'COMPSCI 162',  dept:'cs compsci', name:'Formal Languages and Automata Theory'},
+    {code:'COMPSCI 171',  dept:'cs compsci', name:'Introduction to Artificial Intelligence'},
+    {code:'COMPSCI 178',  dept:'cs compsci', name:'Machine Learning and Data Mining'},
+    {code:'COMPSCI 168',  dept:'cs compsci', name:'Introduction to Computer Security'},
+    {code:'MATH 1B',  dept:'math',    name:'Pre-Calculus'},
+    {code:'MATH 2A',  dept:'math',    name:'Single-Variable Calculus I'},
+    {code:'MATH 2B',  dept:'math',    name:'Single-Variable Calculus II'},
+    {code:'MATH 2D',  dept:'math',    name:'Multivariable Calculus'},
+    {code:'MATH 3A',  dept:'math',    name:'Introduction to Linear Algebra'},
+    {code:'MATH 3D',  dept:'math',    name:'Elementary Differential Equations'},
+    {code:'MATH 13',  dept:'math',    name:'Introduction to Abstract Mathematics'},
+    {code:'MATH 105A', dept:'math',   name:'Numerical Analysis'},
+    {code:'MATH 112A', dept:'math',   name:'Introduction to Partial Differential Equations I'},
+    {code:'MATH 120A', dept:'math',   name:'Introduction to Abstract Algebra I'},
+    {code:'MATH 121A', dept:'math',   name:'Linear Algebra'},
+    {code:'MATH 130A', dept:'math',   name:'Probability I'},
+    {code:'MATH 131A', dept:'math',   name:'Introduction to Mathematical Analysis I'},
+    {code:'STATS 7',    dept:'stats statistics', name:'Basic Statistics'},
+    {code:'STATS 67',   dept:'stats statistics', name:'Introduction to Probability and Statistics'},
+    {code:'STATS 110',  dept:'stats statistics', name:'Statistical Methods for Data Analysis I'},
+    {code:'STATS 120A', dept:'stats statistics', name:'Introduction to Probability and Statistics I'},
+    {code:'STATS 170A', dept:'stats statistics', name:'Introduction to Stochastic Processes I'},
+    {code:'PHYSICS 3A',  dept:'phys physics', name:'Basic Physics I'},
+    {code:'PHYSICS 3B',  dept:'phys physics', name:'Basic Physics II'},
+    {code:'PHYSICS 3C',  dept:'phys physics', name:'Basic Physics III'},
+    {code:'PHYSICS 7C',  dept:'phys physics', name:'Classical Physics'},
+    {code:'CHEM 1A',  dept:'chem chemistry', name:'General Chemistry I'},
+    {code:'CHEM 1B',  dept:'chem chemistry', name:'General Chemistry II'},
+    {code:'CHEM 1C',  dept:'chem chemistry', name:'General Chemistry III'},
+    {code:'CHEM 51A', dept:'chem chemistry', name:'Organic Chemistry I'},
+    {code:'CHEM 51B', dept:'chem chemistry', name:'Organic Chemistry II'},
+    {code:'CHEM 107', dept:'chem chemistry', name:'Introduction to Biochemistry'},
+    {code:'BIO SCI 93',   dept:'bio biosci biology', name:'DNA to Organisms'},
+    {code:'BIO SCI 94',   dept:'bio biosci biology', name:'Organisms to Ecosystems'},
+    {code:'BIO SCI 97',   dept:'bio biosci biology', name:'Human Physiology'},
+    {code:'BIO SCI 100',  dept:'bio biosci biology', name:'Cell Biology'},
+    {code:'BIO SCI 102',  dept:'bio biosci biology', name:'Genetics'},
+    {code:'ECON 13',   dept:'econ economics', name:'Introduction to Economic Reasoning'},
+    {code:'ECON 20A',  dept:'econ economics', name:'Basic Economics I (Microeconomics)'},
+    {code:'ECON 20B',  dept:'econ economics', name:'Basic Economics II (Macroeconomics)'},
+    {code:'ECON 100A', dept:'econ economics', name:'Microeconomic Theory I'},
+    {code:'ECON 105A', dept:'econ economics', name:'Applied Econometrics I'},
+    {code:'PSYCH 7A',  dept:'psych psychology', name:'Introduction to Psychology'},
+    {code:'PSYCH 9A',  dept:'psych psychology', name:'Research Methods in Psychology I'},
+    {code:'PSYCH 10A', dept:'psych psychology', name:'Statistics for Behavioral Sciences I'},
+    {code:'WRITING 39A',  dept:'writing wr', name:'Lower Division Composition'},
+    {code:'WRITING 39B',  dept:'writing wr', name:'Critical Reading and Rhetoric'},
+    {code:'WRITING 39C',  dept:'writing wr', name:'Argument and Research'},
+    {code:'LINGUIS 1',   dept:'lin linguis linguistics lsci', name:'Introduction to Linguistics'},
+    {code:'LINGUIS 2',   dept:'lin linguis linguistics lsci', name:'Introduction to Language'},
+    {code:'LINGUIS 3',   dept:'lin linguis linguistics lsci', name:'Language and Social Context'},
+    {code:'LINGUIS 20',  dept:'lin linguis linguistics lsci', name:'Introduction to Language and Communication'},
+    {code:'LAW 102',  dept:'law', name:'Introduction to American Law'},
+    {code:'LAW 105',  dept:'law', name:'Evidence'},
+    {code:'LAW 108',  dept:'law', name:'Torts'},
+    {code:'LAW 110',  dept:'law', name:'Criminal Law'},
+    {code:'LAW 220',  dept:'law', name:'Technology Law'},
+    {code:'LAW 310',  dept:'law', name:'International Law'},
+    {code:'SOCIOL 1',    dept:'soc sociol sociology', name:'Introduction to Sociology'},
+    {code:'SOCIOL 2',    dept:'soc sociol sociology', name:'Social Problems'},
+    {code:'SOCIOL 100',  dept:'soc sociol sociology', name:'Classical Theory'},
+    {code:'POL SCI 1',   dept:'pol pols polisci', name:'Political Science Overview'},
+    {code:'POL SCI 21A', dept:'pol pols polisci', name:'American Politics'},
+    {code:'POL SCI 51A', dept:'pol pols polisci', name:'Comparative Politics'},
+    {code:'POL SCI 81A', dept:'pol pols polisci', name:'International Relations'},
+    {code:'HIST 20A',  dept:'hist history', name:'United States to 1865'},
+    {code:'HIST 20B',  dept:'hist history', name:'United States since 1865'},
+    {code:'HIST 21A',  dept:'hist history', name:'World History to 1500'},
+    {code:'PHILOS 4',   dept:'phil philos philosophy', name:'Introduction to Ethics'},
+    {code:'PHILOS 6',   dept:'phil philos philosophy', name:'Introduction to Logic'},
+    {code:'PHILOS 11',  dept:'phil philos philosophy', name:'Introduction to Philosophy'},
+    {code:'ANTHRO 2A', dept:'anthro anthropology', name:'Introduction to Sociocultural Anthropology'},
+    {code:'ANTHRO 2B', dept:'anthro anthropology', name:'Introduction to Biological Anthropology'},
+    {code:'SPANISH 1A', dept:'span spanish', name:'Elementary Spanish I'},
+    {code:'SPANISH 1B', dept:'span spanish', name:'Elementary Spanish II'},
+    {code:'FRENCH 1A',  dept:'fre french', name:'Elementary French I'},
+    {code:'CHINESE 1A', dept:'chi chinese mandarin', name:'Elementary Chinese I'},
+    {code:'CHINESE 1B', dept:'chi chinese mandarin', name:'Elementary Chinese II'},
+    {code:'JAPANESE 1A',dept:'jap japn japanese', name:'Elementary Japanese I'},
+    {code:'JAPANESE 1B',dept:'jap japn japanese', name:'Elementary Japanese II'},
+    {code:'KOREAN 1A',  dept:'kor korean', name:'Elementary Korean I'},
+    {code:'KOREAN 1B',  dept:'kor korean', name:'Elementary Korean II'},
+    {code:'ENGR 1A',   dept:'engr engineering', name:'Exploring Engineering'},
+    {code:'CEE 20',    dept:'cee civil engineering', name:'Static Systems Analysis'},
+    {code:'MAE 10',    dept:'mae mechanical engineering', name:'Introduction to MAE'},
+    {code:'MAE 30A',   dept:'mae mechanical engineering', name:'Statics and Strength of Materials'},
+    {code:'MAE 80',    dept:'mae mechanical engineering', name:'Introduction to Programming for Engineers'},
+    {code:'EECS 10',   dept:'eecs electrical engineering', name:'Introduction to Electrical Engineering and Programming'},
+    {code:'EECS 12',   dept:'eecs electrical engineering', name:'Python for Engineers'},
+    {code:'EECS 31',   dept:'eecs electrical engineering', name:'Introduction to Digital Systems'},
+    {code:'EECS 70A',  dept:'eecs electrical engineering', name:'Introduction to Electrical Circuit Analysis'},
+    {code:'BME 10',    dept:'bme biomedical engineering', name:'Introduction to Biomedical Engineering'},
+    {code:'CBE 10',    dept:'cbe chemical engineering', name:'Chemical Engineering Computation'},
+    {code:'MSE 2',     dept:'mse materials science', name:'Materials Science and Engineering I'},
+    {code:'NEUROBI 1',   dept:'neuro neurobi neuroscience', name:'Introduction to Neuroscience'},
+    {code:'FILM 20A',  dept:'film', name:'Introduction to Film Analysis'},
+    {code:'ART 10',    dept:'art arts', name:'Introduction to Art'},
+    {code:'MUSIC 15',  dept:'mus music', name:'Understanding Music'},
+    {code:'PUBHLTH 1',  dept:'pub pubhlth public health', name:'Public Health and Human Society'},
+    {code:'EDUC 10',   dept:'educ education', name:'Introduction to Education'},
+];
+
+const otherSelectedCourses = new Set();
+
+function handleOtherSearch(val) {
+    const q = val.trim().toLowerCase();
+    const dropdown = document.getElementById('otherDropdown');
+    if (!q) { dropdown.innerHTML = ''; dropdown.classList.remove('open'); return; }
+
+    const results = UCI_COURSES.filter(c => {
+        const code = c.code.toLowerCase();
+        // 兼容你原先设计的 dept 字段（比如 'cs compsci'）
+        const dept = c.dept ? c.dept.toLowerCase() : ''; 
+        const name = c.name.toLowerCase();
+
+        // 1. 绝对优先：只要输入的是课程代码(如 MATH)或你设置的缩写(如 compsci)，直接放行
+        if (code.startsWith(q) || code.replace(/\s/g,'').startsWith(q.replace(/\s/g,''))) return true;
+        if (dept.split(' ').some(d => d.startsWith(q))) return true;
+
+        // 2. 核心拦截：只有输入字母 >= 3 个时，才去查课程全名。完美解决 Ma 搜出 Mapping 的问题
+        if (q.length >= 3) {
+            if (name.split(/\s+/).some(word => word.startsWith(q)) || name.includes(q)) {
+                return true;
+            }
+        }
+        return false;
+    }).slice(0, 8);
+
+    if (!results.length) {
+        dropdown.innerHTML = `<div class="other-dropdown-empty">No UCI courses found for "${val}"</div>`;
+        dropdown.classList.add('open');
+        return;
+    }
+
+    dropdown.innerHTML = results.map(c =>
+        `<div class="other-dropdown-item" onclick="selectOtherCourse('${c.code.replace(/'/g,"\\'")}','${c.name.replace(/'/g,"\\'")}')">
+            <strong>${c.code}</strong><span>${c.name}</span>
+        </div>`
+    ).join('');
+    dropdown.classList.add('open');
+}
+
+function showOtherDropdown() {
+    const val = document.getElementById('otherCourseInput').value.trim();
+    if (val) handleOtherSearch(val);
+}
+
+function selectOtherCourse(code, name) {
+    if (otherSelectedCourses.has(code)) return;
+    otherSelectedCourses.add(code);
+
+    const tagsDiv = document.getElementById('otherTags');
+    const tag = document.createElement('span');
+    tag.className = 'other-tag';
+    tag.dataset.code = code;
+    tag.innerHTML = `<strong>${code}</strong> ${name} <button type="button" onclick="removeOtherCourse('${code.replace(/'/g,"\\'")}')">✕</button>`;
+    tagsDiv.appendChild(tag);
+
+    const hidden = document.createElement('input');
+    hidden.type  = 'hidden';
+    hidden.name  = 'courses';
+    hidden.value = code;
+    hidden.id    = 'hidden-' + code.replace(/\s/g,'-');
+    document.getElementById('otherHiddenInputs').appendChild(hidden);
+
+    document.getElementById('otherCourseInput').value = '';
+    document.getElementById('otherDropdown').innerHTML = '';
+    document.getElementById('otherDropdown').classList.remove('open');
+}
+
+function removeOtherCourse(code) {
+    otherSelectedCourses.delete(code);
+    document.getElementById('otherTags').querySelectorAll('.other-tag').forEach(t => { if (t.dataset.code === code) t.remove(); });
+    const h = document.getElementById('hidden-' + code.replace(/\s/g,'-'));
+    if (h) h.remove();
+}
+
+document.addEventListener('click', e => {
+    if (!document.getElementById('otherSearchWidget').contains(e.target)) {
+        const d = document.getElementById('otherDropdown');
+        if (d) { d.innerHTML = ''; d.classList.remove('open'); }
+    }
+});
+
+// Override Step 2 validation to include custom course count
+const _origGoNext2 = goNext;
+goNext = function(cur) {
+    if (cur === 2) {
+        const normal = document.querySelectorAll('input[name="courses"]:checked').length;
+        const custom = otherSelectedCourses.size;
+        if (normal + custom === 0) { shake('step-2'); return; }
+        updatePlaceholder();
+        switchStep(cur, cur + 1);
+        return;
+    }
+    _origGoNext2(cur);
+};
+
+// ══════════════════════════════════════════════════════
+//  AJAX + ATOM LOADER
+// ══════════════════════════════════════════════════════
+(function initOnLoad() {
+    const el = document.getElementById('aaf-data');
+    if (el && el.textContent.trim()) {
+        try { showResult(JSON.parse(el.textContent)); } catch(e) { console.error('initOnLoad:', e); }
+    }
+})();
+
+document.getElementById('mainForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    // 记录本次提交的角色，给 showResult 判断用
+    const checkedRole = document.querySelector('input[name="role"]:checked');
+    window._lastSubmittedRole = checkedRole ? checkedRole.value : 'student';
+    startAtom();
+    fetch('/', { method: 'POST', body: new FormData(this) })
+    .then(r => r.text())
+    .then(html => {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const el  = doc.getElementById('aaf-data');
+        if (el && el.textContent.trim()) {
+            showResult(JSON.parse(el.textContent));
+        } else {
+            const bodyText = (doc.body ? doc.body.innerText : html).trim();
+            stopAtom();
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('hidden'));
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('step-3').classList.remove('hidden');
+            const res = document.getElementById('aafResult');
+            res.style.display = 'block';
+            document.getElementById('aafBody').innerHTML =
+                `<div style="padding:8px 0">
+                    <p style="font-weight:700;color:#c0392b;margin-bottom:12px">⚠️ Generation failed — actual error from Flask:</p>
+                    <pre style="background:#fff0f0;color:#c0392b;padding:14px;border-radius:8px;font-size:13px;white-space:pre-wrap;border:1px solid #fcc;overflow-x:auto">${bodyText.slice(0,1000)}</pre>
+                    <p style="margin-top:14px;font-size:13px;color:#666;line-height:1.9">
+                        <strong>Most common causes:</strong><br>
+                        1. <code>CLAUDE_API_KEY</code> is empty or invalid — fill it in app.py<br>
+                        2. <code>client = Anthropic(api_key=CLAUDE_API_KEY)</code> line missing in app.py<br>
+                        3. Tavily key expired — run <code>export TAVILY_API_KEY="tvly-..."</code> before <code>python app.py</code>
+                    </p>
+                    <button onclick="resetToForm()" style="margin-top:16px;padding:10px 22px;background:#86351C;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">← Try Again</button>
+                </div>`;
+            res.scrollIntoView({ behavior:'smooth', block:'start' });
+        }
+    })
+    .catch(err => {
+        stopAtom();
+        const res = document.getElementById('aafResult');
+        res.style.display = 'block';
+        document.getElementById('aafBody').innerHTML =
+            `<p style="color:#c0392b;font-weight:700">⚠️ Network error: ${err.message}</p>
+             <p style="font-size:13px;color:#666;margin-top:8px">Is Flask running at http://127.0.0.1:5002?</p>
+             <button onclick="resetToForm()" style="margin-top:12px;padding:10px 20px;background:#86351C;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600">← Try Again</button>`;
+    });
+});
+
+function startAtom() {
+    document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
+    document.getElementById('atomLoader').classList.add('active');
+    document.getElementById('aafResult').style.display = 'none';
+    document.getElementById('atomLoader').scrollIntoView({ behavior:'smooth', block:'center' });
+}
+function stopAtom() {
+    document.getElementById('atomLoader').classList.remove('active');
+}
+function showResult(markdown) {
+    stopAtom();
+    const body = document.getElementById('aafBody');
+    body.innerHTML = marked.parse(markdown);
+    injectTableActions();   // ← 注入 Section 2 底部的 more... 菜单
+
+    // senior 模式：在回答左下角注入 Contributor 按钮
+    if (window._lastSubmittedRole === 'senior') {
+        const contrib = document.createElement('div');
+        contrib.className = 'senior-contrib-row';
+        contrib.innerHTML = '<button class="btn-contrib" onclick="resetToForm()">Join As a Contributor of AAF</button>';
+        body.appendChild(contrib);
+    }
+
+    // 满意度评分（所有用户）
+    const ratingDiv = document.createElement('div');
+    ratingDiv.className = 'aaf-rating';
+    ratingDiv.innerHTML =
+        '<span class="aaf-rating-label">Does this guide spark something in you?</span>' +
+        '<div class="aaf-rating-btns">' +
+            '<button class="aaf-rating-btn" title="Love it!" onclick="aafRate(this,\'good\')">😄</button>' +
+            '<button class="aaf-rating-btn" title="It\'s okay" onclick="aafRate(this,\'neutral\')">🧐</button>' +
+            '<button class="aaf-rating-btn" title="Not quite" onclick="aafRate(this,\'bad\')">😕</button>' +
+            '<button class="aaf-rating-submit" id="aaf-rating-send" onclick="aafSubmitRating(this)">Send ↗</button>' +
+        '</div>';
+    body.appendChild(ratingDiv);
+
+    const res = document.getElementById('aafResult');
+    res.style.display = 'block';
+    setTimeout(() => res.scrollIntoView({ behavior:'smooth', block:'start' }), 50);
+}
+function resetToForm() {
+    document.getElementById('aafResult').style.display = 'none';
+    document.getElementById('atomLoader').classList.remove('active');
+    document.querySelectorAll('.step').forEach(s => s.classList.add('hidden'));
+    document.getElementById('step-1').classList.remove('hidden');
+    updateProgress(1);
+    document.querySelectorAll('input[name="role"]').forEach(r => {
+        r.checked = false;
+        r.closest('.role-card').classList.remove('selected','dimmed');
+    });
+    document.querySelectorAll('input[name="courses"]').forEach(c => {
+        c.checked = false;
+        if (c.closest('label')) c.closest('label').classList.remove('selected');
+    });
+    document.querySelectorAll('input[name="goal"],input[name="expertise"]').forEach(g => {
+        g.checked = false;
+        if (g.closest('label')) g.closest('label').classList.remove('selected');
+    });
+    document.getElementById('user_query').value = '';
+    window.scrollTo({ top:0, behavior:'smooth' });
+}
+// ══════════════════════════════════════════════════════
+//  SECTION 2 — MORE... MENU（单个按钮，位于所有表格底部右侧）
+// ══════════════════════════════════════════════════════
+function injectTableActions() {
+    const tables = document.querySelectorAll('#aafBody table');
+    if (tables.length === 0) return;
+
+    // ── 收集所有表格的全部事项 ──
+    const allEvents = [];
+    tables.forEach(table => {
+        table.querySelectorAll('tbody tr').forEach(row => {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 1) return;
+            allEvents.push({
+                taskName:  cells[0]                ? cells[0].innerText.trim()                : 'Study Task',
+                timeHint:  cells[1]                ? cells[1].innerText.trim()                : '',
+                stepsText: cells[cells.length - 1] ? cells[cells.length - 1].innerText.trim() : ''
+            });
+        });
+    });
+
+    // ── 在最后一张表格后注入唯一的 more... 触发器 ──
+    const lastTable = tables[tables.length - 1];
+    const uid = 'pop-s2-' + Date.now();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'section-action-wrap';
+    wrap.innerHTML =
+        '<button class="row-trigger section-trigger" id="trig-' + uid + '" title="More options">more...</button>' +
+        '<div class="row-popover" id="' + uid + '">' +
+            '<button class="popover-item" id="cal-' + uid + '">' +
+                '<span class="popover-item-icon">📅</span> Add all to Calendar' +
+            '</button>' +
+            '<div class="popover-divider"></div>' +
+            '<button class="popover-item" id="pdf-' + uid + '">' +
+                '<span class="popover-item-icon">📄</span> Download as PDF' +
+            '</button>' +
+            '<div class="popover-divider"></div>' +
+            '<button class="popover-item" id="doc-' + uid + '">' +
+                '<span class="popover-item-icon">📝</span> Export for Google Docs' +
+            '</button>' +
+            '<div class="popover-divider"></div>' +
+            '<button class="popover-item" id="shr-' + uid + '">' +
+                '<span class="popover-item-icon">↗</span> Share' +
+            '</button>' +
+        '</div>';
+
+    lastTable.insertAdjacentElement('afterend', wrap);
+
+    // ── Toggle ──
+    document.getElementById('trig-' + uid).addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.querySelectorAll('.row-popover.open').forEach(p => {
+            if (p.id !== uid) p.classList.remove('open');
+        });
+        document.getElementById(uid).classList.toggle('open');
+    });
+
+    // ── Add ALL to Calendar → .ics 文件下载 ──
+    document.getElementById('cal-' + uid).addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById(uid).classList.remove('open');
+
+        const lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'CALSCALE:GREGORIAN',
+            'PRODID:-//AAF//Anteater Acing the Future//EN'
+        ];
+
+        const base = new Date();
+        base.setDate(base.getDate() + 1);
+        base.setHours(9, 0, 0, 0);
+
+        allEvents.forEach((ev, i) => {
+            // 每个事项间隔 2 小时，持续 45 分钟
+            const start = new Date(base.getTime() + i * 2 * 60 * 60 * 1000);
+            const end   = new Date(start.getTime() + 45 * 60 * 1000);
+            const fmt   = dt => dt.toISOString().replace(/[-:.]/g,'').slice(0,15) + 'Z';
+            const desc  = (ev.timeHint ? '\u23F1 ' + ev.timeHint + '\\n\\n' : '') +
+                          ev.stepsText.replace(/[\r\n]+/g, '\\n').slice(0, 500);
+
+            lines.push('BEGIN:VEVENT');
+            lines.push('UID:aaf-' + Date.now() + '-' + i + '@aaf.uci');
+            lines.push('DTSTART:' + fmt(start));
+            lines.push('DTEND:'   + fmt(end));
+            lines.push('SUMMARY:AAF: ' + ev.taskName.replace(/[\r\n]/g,' ').slice(0, 80));
+            lines.push('DESCRIPTION:' + desc);
+            lines.push('END:VEVENT');
+        });
+        lines.push('END:VCALENDAR');
+
+        const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'AAF-Study-Plan.ics';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    });
+
+    // ── Download as PDF ──
+    document.getElementById('pdf-' + uid).addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById(uid).classList.remove('open');
+
+        let tablesHTML = '';
+        tables.forEach(t => { tablesHTML += t.outerHTML; });
+
+        // 用 Blob URL：浏览器视其为受信任资源，绕过弹窗拦截
+        // onafterprint：打印/保存完成后自动关闭临时标签页
+        const printContent = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AAF Study Plan</title>' +
+            '<style>' +
+            'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:40px;color:#2b2b2b;background:#fff}' +
+            'h1{font-size:22px;color:#86351C;margin-bottom:20px;border-bottom:2px solid #86351C;padding-bottom:10px}' +
+            'table{width:100%;border-collapse:collapse;margin-bottom:30px;font-size:12.5px;page-break-inside:avoid}' +
+            'th{background:#f4f1ea;color:#86351C;font-weight:700;padding:11px 12px;text-align:left;border-bottom:2px solid #86351C;font-size:12px}' +
+            'td{padding:11px 12px;border-bottom:1px solid #d8d3c5;vertical-align:top;line-height:1.65}' +
+            'tr:nth-child(even) td{background:#fafaf8}' +
+            'footer{margin-top:40px;font-size:10px;color:#aaa;text-align:center}' +
+            '@media print{body{padding:20px}}' +
+            '</style></head><body>' +
+            '<h1>\uD83D\uDC1C AAF \u2014 Your Study Battle Plan</h1>' +
+            tablesHTML +
+            '<footer>Generated by AAF (Anteater Acing the Future)</footer>' +
+            '<script>' +
+            'window.onload=function(){' +
+                'window.print();' +
+                'window.onafterprint=function(){window.close();};' +
+            '};' +
+            '<\/script>' +
+            '</body></html>';
+
+        const blob = new Blob([printContent], { type: 'text/html;charset=utf-8' });
+        const blobUrl = URL.createObjectURL(blob);
+        const win = window.open(blobUrl, '_blank');
+
+        if (!win) {
+            // 弹窗被拦截时的降级提示
+            const btn = this;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span class="popover-item-icon">⚠️</span> Allow pop-ups → retry';
+            setTimeout(() => { btn.innerHTML = orig; }, 3000);
+        }
+        // 延迟释放 blob URL（确保新窗口已完成加载）
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+    });
+
+    // ── Export for Google Docs → .html 下载，可直接 File > Open 导入 ──
+    document.getElementById('doc-' + uid).addEventListener('click', function(e) {
+        e.stopPropagation();
+        document.getElementById(uid).classList.remove('open');
+        const btn = this;
+
+        let tablesHTML = '';
+        tables.forEach(t => { tablesHTML += t.outerHTML; });
+
+        const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>AAF Study Plan</title></head><body>' +
+            '<h1>\uD83D\uDC1C AAF \u2014 Your Study Battle Plan</h1>' +
+            tablesHTML +
+            '<p><em>Generated by AAF (Anteater Acing the Future)</em></p>' +
+            '</body></html>';
+
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'AAF-Study-Plan.html';
+        a.click();
+        URL.revokeObjectURL(a.href);
+
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span class="popover-item-icon">\u2705</span> Saved! Open in Google Docs \u2192 File \u2192 Open';
+        setTimeout(() => { btn.innerHTML = orig; }, 3200);
+    });
+
+    // ── Share ──
+    const shareText = allEvents.map(ev =>
+        '\uD83D\uDCCC ' + ev.taskName + (ev.timeHint ? '\n\u23F1 ' + ev.timeHint : '')
+    ).join('\n\n');
+
+    document.getElementById('shr-' + uid).addEventListener('click', async function(e) {
+        e.stopPropagation();
+        document.getElementById(uid).classList.remove('open');
+        const btn = this;
+        if (navigator.share) {
+            try { await navigator.share({ title: 'My AAF Study Plan', text: shareText, url: window.location.href }); return; }
+            catch(err) { if (err.name === 'AbortError') return; }
+        }
+        try {
+            await navigator.clipboard.writeText(shareText + '\n\n' + window.location.href);
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<span class="popover-item-icon">\u2705</span> Copied!';
+            setTimeout(() => { btn.innerHTML = orig; }, 1800);
+        } catch(_) {}
+    });
+
+    // 全局点击关闭（只注册一次）
+    if (!window._aafPopoverListener) {
+        window._aafPopoverListener = true;
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.row-trigger') && !e.target.closest('.row-popover')) {
+                document.querySelectorAll('.row-popover.open').forEach(p => p.classList.remove('open'));
+            }
+        });
+    }
+}
+
+// 满意度评分
+function aafRate(btn, val) {
+    const btns = btn.closest('.aaf-rating-btns').querySelectorAll('.aaf-rating-btn');
+    btns.forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    if (navigator.vibrate) navigator.vibrate(30);
+
+    // 选中 emoji 后显示 Send 按钮
+    const send = btn.closest('.aaf-rating-btns').querySelector('.aaf-rating-submit');
+    if (send) {
+        send.dataset.val = val;
+        send.classList.add('visible');
+    }
+}
+
+function aafSubmitRating(btn) {
+    const val = btn.dataset.val || 'neutral';
+    const emoji = { good: '😄', neutral: '🧐', bad: '😕' }[val] || '🧐';
+
+    // 把整行替换成感谢语，干净收尾
+    const row = btn.closest('.aaf-rating');
+    row.innerHTML =
+        '<span class="aaf-rating-thanks">' +
+            emoji + ' Thank you for your feedback — it helps James make AAF better for every Anteater. Zot!' +
+        '</span>';
+}
+
+// 保留兼容性存根
+function togglePopover(e, uid) {}
+function closePopover(uid) { const p = document.getElementById(uid); if (p) p.classList.remove('open'); }
+async function shareTask() {}
 
 </script>
 </body>

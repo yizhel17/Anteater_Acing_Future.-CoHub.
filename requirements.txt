@@ -1,0 +1,5 @@
+flask
+anthropic
+tavily-python
+gunicorn
+python-dotenv
