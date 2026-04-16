@@ -228,26 +228,25 @@ def index():
             search_results = ""
             if courses and role != "senior":
                 snippets = []
-                for course in courses[:2]:
-                    targeted_queries = [
-                        f"{course} UCI student experience tips reddit difficulty",
-                        f"{course} UCI professor syllabus exam style course structure",
-                        f"{course} UCI internship career relevance skills employers",
-                    ]
-                    for query in targeted_queries:
-                        try:
-                            res = tavily.search(query=query, search_depth="basic", max_results=2)
-                            for r in res.get("results", []):
-                                url = r.get("url", "").lower()
-                                if "reddit.com" in url:            source_tag = "📌 r/UCI Forum"
-                                elif "uci.edu" in url:             source_tag = "🎓 UCI Official"
-                                elif "ratemyprofessors.com" in url:source_tag = "⭐ RateMyProfessors"
-                                elif "blind.com" in url:           source_tag = "💼 Blind SWE Intel"
-                                elif "linkedin.com" in url:        source_tag = "🔗 LinkedIn"
-                                else:                              source_tag = "🌐 Web"
-                                snippets.append(f"[{source_tag} | {r['title']}]: {r['content'][:200]}")
-                        except Exception:
-                            pass  # Tavily 失败不影响主流程
+            for course in courses[:1]:   # 只取第1门课，避免超时
+                targeted_queries = [
+                    f"{course} UCI professor exam difficulty study tips reddit student experience",
+                    f"{course} UCI internship career relevance skills employers",
+        ]
+            for query in targeted_queries:
+                try:
+                    res = tavily.search(query=query, search_depth="basic", max_results=3)
+                    for r in res.get("results", []):
+                        url = r.get("url", "").lower()
+                        if "reddit.com" in url:             source_tag = "📌 r/UCI Forum"
+                        elif "uci.edu" in url:              source_tag = "🎓 UCI Official"
+                        elif "ratemyprofessors.com" in url: source_tag = "⭐ RateMyProfessors"
+                        elif "blind.com" in url:            source_tag = "💼 Blind SWE Intel"
+                        elif "linkedin.com" in url:         source_tag = "🔗 LinkedIn"
+                        else:                               source_tag = "🌐 Web"
+                        snippets.append(f"[{source_tag} | {r['title']}]: {r['content'][:200]}")
+                except Exception:
+                    pass  # Tavily 失败不影响主流程
 
                 if snippets:
                     seen, deduped = set(), []
