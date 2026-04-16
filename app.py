@@ -28,7 +28,11 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 TAVILY_API_KEY = os.environ.get("TAVILY_API_KEY", "")
 
 # 2. 注入密钥，初始化客户端
-client = Anthropic(api_key=ANTHROPIC_API_KEY)
+import httpx
+client = Anthropic(
+    api_key=ANTHROPIC_API_KEY,
+    http_client=httpx.Client(timeout=90.0)
+)
 tavily = TavilyClient(api_key=TAVILY_API_KEY)
 
 # ══════════════════════════════════════════════════════════════
