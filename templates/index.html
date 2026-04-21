@@ -471,11 +471,12 @@ function updatePlaceholder() {
     // 🌟 学长学姐专属逻辑
     if (role === 'senior') {
         if (checked.length === 0) {
-            ta.placeholder = "Example: For ICS 32 Project 1, set up pylint BEFORE you start coding. It'll save you 3 hours of debugging later.\n\nYour tip (keep it short): ...";
+            ta.placeholder = "Drop a 1-sentence teaser tip here to witness the power of our AI model — then share your full story in the official Contributor Form below 👇";
             return; 
         }
         if (checked.length === 1) {
-            ta.placeholder = seniorPlaceholders[checked[0]] || `e.g., I took ${checked[0]} recently and can help explain the core concepts...`;
+            ta.placeholder = seniorPlaceholders[checked[0]] ||
+                `Drop a quick teaser about ${checked[0]} to witness the power of our AI model — then share the full story in the Contributor Form below 👇`;
             return;
         }
         if (checked.length > 1) {
@@ -486,7 +487,7 @@ function updatePlaceholder() {
                 let coursesText = checked.length === 2 
                     ? checked.join(" and ") 
                     : checked.slice(0, -1).join(", ") + ", and " + checked[checked.length - 1];
-                ta.placeholder = `e.g., I survived taking ${coursesText} simultaneously. I have some great time-management strategies and calendar blocking tips to help you balance the workload...`;
+                ta.placeholder = `Drop a quick teaser about surviving ${coursesText} to witness the power of our AI model — then share the full strategies in the Contributor Form below 👇`;
             }
             return;
         }
