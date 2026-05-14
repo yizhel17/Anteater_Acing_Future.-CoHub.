@@ -7,6 +7,7 @@ from tavily import TavilyClient
 from dotenv import load_dotenv
 load_dotenv()  # 读取 .env 文件
 
+from rag import retrieve_tips
 from collections import defaultdict
 import time
 
@@ -217,16 +218,26 @@ def index():
             user_query = request.form.get("user_query")
 
             # ── 学长数据库 ──
-            senior_tips     = get_senior_tips(courses)
             senior_tips_str = ""
-            if senior_tips:
+            if courses:
                 lines = ["=== SENIOR TIPS DATABASE ==="]
-                for course, tips in senior_tips.items():
-                    lines.append(f"[{course}]")
-                    for i, tip in enumerate(tips, 1):
-                        lines.append(f"  {i}. {tip}")
+                tips_found = False
+                for course in courses:
+                    # 动态生成查询词，去本地 ChromaDB 捞取最匹配的 3 条经验
+                    search_query = f"{course} danger zone actionable setup tips"
+                    raw_tips = retrieve_tips(query=search_query, course=course, n=3)
+                    
+                    if raw_tips:
+                        tips_found = True
+                        lines.append(f"\n[{course} VERIFIED FEEDBACK]:")
+                        for tip in raw_tips:
+                            lines.append(f"{tip}\n---")
+                
                 lines.append("=== END ===")
-                senior_tips_str = "\n".join(lines)
+                
+                # 只有真正搜到数据时，才组装成上下文喂给大模型
+                if tips_found:
+                    senior_tips_str = "\n".join(lines)
 
             # ── Tavily 高级定向检索 ──
             search_results = ""
