@@ -3,6 +3,7 @@ import logging
 from pathlib import Path
 
 import chromadb
+from chromadb.config import Settings as ChromaSettings
 
 logger = logging.getLogger(__name__)
 
@@ -12,7 +13,10 @@ _COLLECTION_NAME = "aaf_data"
 
 
 def _get_collection():
-    client = chromadb.PersistentClient(path=_DB_PATH)
+    client = chromadb.PersistentClient(
+        path=_DB_PATH,
+        settings=ChromaSettings(anonymized_telemetry=False),
+    )
     return client.get_or_create_collection(name=_COLLECTION_NAME)
 
 
