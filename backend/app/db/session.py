@@ -10,6 +10,7 @@ async_engine = create_async_engine(
     echo=False,
 )
 
+# AsyncSessionLocal is a factory for creating new AsyncSession instances.
 AsyncSessionLocal = async_sessionmaker(
     async_engine,
     expire_on_commit=False,
