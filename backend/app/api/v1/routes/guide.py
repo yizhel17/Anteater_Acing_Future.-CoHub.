@@ -1,13 +1,20 @@
 import asyncio
 import logging
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_optional_user
+from app.api.deps import get_current_user, get_db, get_optional_user
 from app.models.guide import Guide
 from app.models.user import User
-from app.schemas.guide import GuideRequest, GuideResponse
+from app.schemas.guide import (
+    GuideHistoryItem,
+    GuideHistoryResponse,
+    GuideRequest,
+    GuideResponse,
+)
 from app.services import ai_service, rag_service, search_service
 
 logger = logging.getLogger(__name__)
@@ -123,3 +130,53 @@ async def generate_guide_endpoint(
     except Exception as exc:
         logger.error("generate_guide failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Guide generation failed") from exc
+
+
+@router.get("/history", response_model=GuideHistoryResponse)
+async def guide_history(
+    limit: int = 20,
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    count_result = await db.execute(
+        select(func.count()).select_from(Guide).where(Guide.user_id == user.id)
+    )
+    total = count_result.scalar_one()
+
+    result = await db.execute(
+        select(Guide)
+        .where(Guide.user_id == user.id)
+        .order_by(Guide.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    guides = result.scalars().all()
+
+    items = [
+        GuideHistoryItem(
+            guide_id=g.id,
+            role=g.role,
+            courses=g.courses,
+            created_at=g.created_at,
+        )
+        for g in guides
+    ]
+    return GuideHistoryResponse(items=items, total=total)
+
+
+@router.get("/{guide_id}", response_model=GuideResponse)
+async def get_guide(
+    guide_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    guide = await db.get(Guide, guide_id)
+    if guide is None:
+        raise HTTPException(status_code=404, detail="Guide not found")
+    return GuideResponse(
+        guide_id=guide.id,
+        guide_markdown=guide.response_md,
+        sources_used=[],
+        tips_count=0,
+        tokens_used=guide.tokens_used or 0,
+    )

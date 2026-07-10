@@ -48,3 +48,12 @@ def _retrieve_tips_sync(query: str, course: str | None, n: int) -> list[str]:
 
 async def retrieve_tips_async(query: str, course: str | None = None, n: int = 3) -> list[str]:
     return await asyncio.to_thread(_retrieve_tips_sync, query, course, n)
+
+
+def _add_tip_sync(tip_id: str, course: str, text: str) -> None:
+    collection = _get_collection()
+    collection.add(documents=[text], metadatas=[{"course": course}], ids=[tip_id])
+
+
+async def add_tip_async(tip_id: str, course: str, text: str) -> None:
+    await asyncio.to_thread(_add_tip_sync, tip_id, course, text)

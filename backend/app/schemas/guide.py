@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -18,3 +19,15 @@ class GuideResponse(BaseModel):
     sources_used: list[str]
     tips_count: int
     tokens_used: int
+
+
+class GuideHistoryItem(BaseModel):
+    guide_id: UUID
+    role: str
+    courses: list[str]
+    created_at: datetime
+
+
+class GuideHistoryResponse(BaseModel):
+    items: list[GuideHistoryItem]
+    total: int

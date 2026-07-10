@@ -1,7 +1,0 @@
-flask
-anthropic
-tavily-python
-gunicorn
-python-dotenv
-chromadb==0.4.24
-numpy<2.0.0

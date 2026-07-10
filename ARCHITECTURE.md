@@ -3,8 +3,8 @@
 > 本文件是 AAF (Anteater Acing the Future) 项目从 Flask 单体应用向工业级全栈应用重构的架构总纲。
 > 所有重构阶段的目录结构、技术决策与工程规范均以本文件为准。
 >
-> **最后更新：** 2026-07-04
-> **状态：** 架构设计阶段（Phase 0 待启动）
+> **最后更新：** 2026-07-10（补充 Phase 3 管理员审核端点契约）
+> **状态：** Phase 2 已完成，Phase 3 规划中
 
 ---
 
@@ -59,7 +59,7 @@ AAF_Product/                              ← Git Monorepo 根目录
 │   │   │           ├── guide.py          ← POST /guide/generate（核心 AI 导引）
 │   │   │           ├── auth.py           ← POST /auth/register, /auth/login, /auth/refresh
 │   │   │           ├── ratings.py        ← POST /ratings（满意度持久化）
-│   │   │           ├── contributions.py  ← POST /contributions（学长经验提交）
+│   │   │           ├── contributions.py  ← POST /contributions（提交）+ 管理员审核（GET 列表 / approve / delete，需 admin 角色）
 │   │   │           └── courses.py        ← GET /courses（静态课程列表接口）
 │   │   │
 │   │   ├── core/
@@ -325,6 +325,9 @@ async def generate_guide(
 | `/api/v1/guide/{id}` | GET | 获取单条导引详情 | Optional |
 | `/api/v1/ratings` | POST | 提交满意度评分 | Optional |
 | `/api/v1/contributions` | POST | 学长提交课程经验 | Optional |
+| `/api/v1/contributions` | GET | 管理员查看待审核列表（`is_approved=false`） | Required (admin) |
+| `/api/v1/contributions/{id}/approve` | POST | 管理员批准，同步写入 ChromaDB | Required (admin) |
+| `/api/v1/contributions/{id}` | DELETE | 管理员驳回（直接删除记录） | Required (admin) |
 | `/api/v1/courses` | GET | 获取支持的 UCI 课程列表 | None |
 | `/api/v1/auth/register` | POST | 邮箱注册 | None |
 | `/api/v1/auth/login` | POST | 邮箱登录，返回 Token | None |
