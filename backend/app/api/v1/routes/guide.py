@@ -1,11 +1,11 @@
 import asyncio
 import logging
-import uuid
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_optional_user
+from app.models.guide import Guide
 from app.models.user import User
 from app.schemas.guide import GuideRequest, GuideResponse
 from app.services import ai_service, rag_service, search_service
@@ -96,9 +96,22 @@ async def generate_guide_endpoint(
 
         guide_markdown, tokens_used = await ai_service.generate_guide(user_context)
 
-        # Phase 1: no DB write — guide_id is ephemeral
+        # Phase 2: 写入 guides 表（匿名用户 user_id=None）
+        guide = Guide(
+            user_id=user.id if user else None,
+            role=role,
+            courses=courses,
+            confidence=body.confidence,
+            goals=body.goals,
+            user_query=body.user_query,
+            response_md=guide_markdown,
+            tokens_used=tokens_used,
+        )
+        db.add(guide)
+        await db.flush()  # 获取 DB 生成的 guide.id；commit 在 get_db() 生命周期末统一提交
+
         return GuideResponse(
-            guide_id=uuid.uuid4(),
+            guide_id=guide.id,
             guide_markdown=guide_markdown,
             sources_used=sources_used,
             tips_count=tips_count,
