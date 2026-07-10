@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -19,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("AAF FastAPI starting up...")
+    async with async_engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+    logger.info("AAF FastAPI starting up — DB OK")
     yield
     await async_engine.dispose()
     logger.info("AAF FastAPI shut down.")

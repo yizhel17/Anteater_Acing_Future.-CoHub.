@@ -3,9 +3,11 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 pydantic-settings
+email-validator
 httpx
 python-jose[cryptography]
 passlib[bcrypt]
+bcrypt==4.0.1
 anthropic
 tavily-python
 chromadb==0.4.24
