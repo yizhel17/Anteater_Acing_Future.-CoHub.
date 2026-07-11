@@ -13,7 +13,7 @@ import { RatingBar } from './RatingBar'
 interface GuideCardProps {
   guideId: string
   markdown: string
-  role: Role
+  role?: Role
   onReset: () => void
 }
 
@@ -66,8 +66,11 @@ export function GuideCard({ guideId, markdown, role, onReset }: GuideCardProps) 
         </ReactMarkdown>
 
         {role === 'senior' && (
-          <div className="senior-contrib-row">
-            <Link className="btn-contrib" to="/contribute">
+          <div className="mt-6 flex justify-center border-t border-[var(--border-ink)] pt-6">
+            <Link
+              to="/contribute"
+              className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-sky-200 to-blue-300 px-8 py-3.5 text-[15px] font-bold tracking-wide text-[var(--ink-black)] no-underline shadow-sm transition-all hover:-translate-y-0.5 hover:from-sky-300 hover:to-blue-400 hover:no-underline hover:shadow-md"
+            >
               Join As a Contributor of AAF
             </Link>
           </div>

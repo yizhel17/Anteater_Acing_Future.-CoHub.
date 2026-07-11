@@ -9,6 +9,10 @@ import { StepCourses } from '@/components/wizard/StepCourses'
 import { StepGoals } from '@/components/wizard/StepGoals'
 import { StepIdentity } from '@/components/wizard/StepIdentity'
 import { getGuideErrorMessage, useGuide } from '@/hooks/useGuide'
+import { AdminContributionsPage } from '@/pages/AdminContributionsPage'
+import { ContributePage } from '@/pages/ContributePage'
+import { GuideDetailPage } from '@/pages/GuideDetailPage'
+import { GuideHistoryPage } from '@/pages/GuideHistoryPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 import { useWizardStore } from '@/store/wizardStore'
@@ -139,10 +143,10 @@ function App() {
           <Route path="/" element={<WizardPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          {/* Milestones J/K/L routes (/history, /guide/:id, /contribute,
-              /admin/contributions) aren't built yet — catch-all keeps any
-              existing link to them (e.g. GuideCard's senior CTA) from
-              rendering a blank page in the meantime. */}
+          <Route path="/history" element={<GuideHistoryPage />} />
+          <Route path="/guide/:id" element={<GuideDetailPage />} />
+          <Route path="/contribute" element={<ContributePage />} />
+          <Route path="/admin/contributions" element={<AdminContributionsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

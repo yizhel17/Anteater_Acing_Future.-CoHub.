@@ -19,9 +19,9 @@ export function RegisterPage() {
     <div className="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#2D0D04] px-4 py-10">
       
       {/* === 动态流体背景层 (Fluid Mesh Gradient) === */}
-      <div className="absolute -left-[10%] -top-[10%] h-[70vh] w-[70vw] rounded-full bg-[var(--accent)]/50 blur-[130px] [animation:blob-float_25s_infinite_alternate]" />
-      <div className="absolute -right-[10%] top-[30%] h-[80vh] w-[70vw] rounded-full bg-[#9b2c0c]/40 blur-[150px] [animation:blob-float_20s_infinite_alternate_reverse]" />
-      <div className="absolute -bottom-[20%] left-[20%] h-[60vh] w-[60vw] rounded-full bg-[#ff5e29]/20 blur-[140px] [animation:blob-float_30s_infinite_alternate]" />
+      <div className="absolute -left-[10%] -top-[10%] h-[70vh] w-[70vw] rounded-full bg-[var(--accent)]/50 blur-[130px] [animation:blob-float_25s_linear_infinite_alternate]" />
+      <div className="absolute -right-[10%] top-[30%] h-[80vh] w-[70vw] rounded-full bg-[#9b2c0c]/40 blur-[150px] [animation:blob-float_20s_linear_infinite_alternate_reverse]" />
+      <div className="absolute -bottom-[20%] left-[20%] h-[60vh] w-[60vw] rounded-full bg-[#ff5e29]/20 blur-[140px] [animation:blob-float_30s_linear_infinite_alternate]" />
 
       {/* === 主卡片层 (悬浮在流体之上) === */}
       <div className="relative z-10 flex w-full max-w-[880px] flex-col overflow-hidden !rounded-[20px] bg-white shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)] border border-white/15 md:min-h-[500px] md:flex-row">

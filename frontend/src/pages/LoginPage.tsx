@@ -19,9 +19,9 @@ export function LoginPage() {
       
       {/* === 动态流体背景层 (Fluid Mesh Gradient) === */}
       {/* 巨型模糊光斑，在底层无限缓慢游走交融 */}
-      <div className="absolute -left-[10%] -top-[10%] h-[70vh] w-[70vw] rounded-full bg-[var(--accent)]/50 blur-[130px] [animation:blob-float_25s_infinite_alternate]" />
-      <div className="absolute -right-[10%] top-[30%] h-[80vh] w-[70vw] rounded-full bg-[#9b2c0c]/40 blur-[150px] [animation:blob-float_20s_infinite_alternate_reverse]" />
-      <div className="absolute -bottom-[20%] left-[20%] h-[60vh] w-[60vw] rounded-full bg-[#ff5e29]/20 blur-[140px] [animation:blob-float_30s_infinite_alternate]" />
+      <div className="absolute -left-[10%] -top-[10%] h-[70vh] w-[70vw] rounded-full bg-[var(--accent)]/50 blur-[130px] [animation:blob-float_25s_linear_infinite_alternate]" />
+      <div className="absolute -right-[10%] top-[30%] h-[80vh] w-[70vw] rounded-full bg-[#9b2c0c]/40 blur-[150px] [animation:blob-float_20s_linear_infinite_alternate_reverse]" />
+      <div className="absolute -bottom-[20%] left-[20%] h-[60vh] w-[60vw] rounded-full bg-[#ff5e29]/20 blur-[140px] [animation:blob-float_30s_linear_infinite_alternate]" />
 
       {/* === 主卡片层 (悬浮在流体之上) === */}
       {/* 增加了深色大阴影和 1px 的玻璃描边，使其在红色背景中脱颖而出 */}

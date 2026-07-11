@@ -36,6 +36,9 @@ async def submit_contribution(
     return ContributionResponse(
         id=contribution.id,
         course=contribution.course,
+        danger_zone=contribution.danger_zone,
+        setup_tips=contribution.setup_tips,
+        career_value=contribution.career_value,
         is_approved=contribution.is_approved,
         created_at=contribution.created_at,
     )
@@ -56,6 +59,9 @@ async def list_pending_contributions(
         ContributionResponse(
             id=c.id,
             course=c.course,
+            danger_zone=c.danger_zone,
+            setup_tips=c.setup_tips,
+            career_value=c.career_value,
             is_approved=c.is_approved,
             created_at=c.created_at,
         )
@@ -89,6 +95,9 @@ async def approve_contribution(
     return ContributionResponse(
         id=contribution.id,
         course=contribution.course,
+        danger_zone=contribution.danger_zone,
+        setup_tips=contribution.setup_tips,
+        career_value=contribution.career_value,
         is_approved=contribution.is_approved,
         created_at=contribution.created_at,
     )

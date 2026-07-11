@@ -81,6 +81,9 @@ export interface ContributionRequest {
 export interface ContributionResponse {
   id: string
   course: string
+  danger_zone: string | null
+  setup_tips: string | null
+  career_value: string | null
   is_approved: boolean
   created_at: string
 }

@@ -14,5 +14,8 @@ class ContributionRequest(BaseModel):
 class ContributionResponse(BaseModel):
     id: UUID
     course: str
+    danger_zone: str | None = None
+    setup_tips: str | None = None
+    career_value: str | None = None
     is_approved: bool
     created_at: datetime
