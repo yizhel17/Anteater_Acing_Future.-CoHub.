@@ -1,121 +1,137 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useEffect } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+import { GuideCard } from '@/components/result/GuideCard'
+import { AtomLoader } from '@/components/ui/AtomLoader'
+import { ProgressBar } from '@/components/ui/ProgressBar'
+import { StepCourses } from '@/components/wizard/StepCourses'
+import { StepGoals } from '@/components/wizard/StepGoals'
+import { StepIdentity } from '@/components/wizard/StepIdentity'
+import { getGuideErrorMessage, useGuide } from '@/hooks/useGuide'
+import { useWizardStore } from '@/store/wizardStore'
+import type { GuideRequest } from '@/types'
+
+const queryClient = new QueryClient()
+
+function Wizard() {
+  const currentStep = useWizardStore((s) => s.currentStep)
+  const setCurrentStep = useWizardStore((s) => s.setCurrentStep)
+  const role = useWizardStore((s) => s.role)
+  const courses = useWizardStore((s) => s.courses)
+  const otherSelectedCourses = useWizardStore((s) => s.otherSelectedCourses)
+  const confidence = useWizardStore((s) => s.confidence)
+  const goals = useWizardStore((s) => s.goals)
+  const expertise = useWizardStore((s) => s.expertise)
+  const userQuery = useWizardStore((s) => s.userQuery)
+  const resetWizard = useWizardStore((s) => s.reset)
+
+  const { mutate, data, isPending, isError, error, reset: resetMutation } = useGuide()
+
+  useEffect(() => {
+    if (isPending) {
+      document.querySelector('.atom-loader')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [isPending])
+
+  useEffect(() => {
+    if (!data) return
+    const t = setTimeout(() => {
+      document.getElementById('aafResult')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    return () => clearTimeout(t)
+  }, [data])
+
+  function handleSubmit() {
+    if (!role) return
+    const req: GuideRequest = {
+      role,
+      courses: [...courses, ...Array.from(otherSelectedCourses)],
+      confidence,
+      goals: role === 'senior' ? expertise : goals,
+      user_query: userQuery.trim() || null,
+    }
+    mutate(req)
+  }
+
+  function handleReset() {
+    resetMutation()
+    resetWizard()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (data && role) {
+    return <GuideCard guideId={data.guide_id} markdown={data.guide_markdown} role={role} onReset={handleReset} />
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      <ProgressBar currentStep={currentStep} />
 
-      <div className="ticks"></div>
+      <div>
+        <StepIdentity visible={currentStep === 1 && !isPending && !isError} onNext={() => setCurrentStep(2)} />
+        <StepCourses
+          visible={currentStep === 2 && !isPending && !isError}
+          onBack={() => setCurrentStep(1)}
+          onNext={() => setCurrentStep(3)}
+        />
+        <StepGoals
+          visible={currentStep === 3 && !isPending && !isError}
+          onBack={() => setCurrentStep(2)}
+          onSubmit={handleSubmit}
+        />
+      </div>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <AtomLoader active={isPending} />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      {isError && (
+        <div className="ai-response-wrap" id="aafResult" style={{ display: 'block' }}>
+          <div className="ai-response-body" id="aafBody">
+            <p style={{ fontWeight: 700, color: '#c0392b', marginBottom: 12 }}>⚠️ {getGuideErrorMessage(error)}</p>
+            <button
+              type="button"
+              onClick={() => resetMutation()}
+              style={{
+                marginTop: 16,
+                padding: '10px 22px',
+                background: '#86351C',
+                color: 'white',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 600,
+              }}
+            >
+              ← Try Again
+            </button>
+          </div>
+        </div>
+      )}
     </>
+  )
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <div className="container">
+          <div className="header-group">
+            <div className="badge">✦ Infinite possibility ahead</div>
+            <h1 className="english-title">
+              <span className="uci-blue">ACING YOUR</span> <span className="uci-gold">FUTURE</span>
+            </h1>
+            <p className="subtitle-main">Let's get you started.</p>
+            <p className="subtitle">Tell us where you are so we can guide you better.</p>
+          </div>
+
+          <Routes>
+            <Route path="/" element={<Wizard />} />
+          </Routes>
+        </div>
+      </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 

@@ -11,13 +11,19 @@ logger = logging.getLogger(__name__)
 _DB_PATH = str(Path(__file__).parent.parent.parent / "chroma_db")
 _COLLECTION_NAME = "aaf_data"
 
+# Created once per process and reused — chromadb.PersistentClient() re-opens
+# the on-disk store and (re)binds the embedding model on every construction,
+# so building a fresh one per RAG call (once per selected course, every
+# request) was the actual source of the ~1-minute guide-generation latency.
+_client = chromadb.PersistentClient(
+    path=_DB_PATH,
+    settings=ChromaSettings(anonymized_telemetry=False),
+)
+_collection = _client.get_or_create_collection(name=_COLLECTION_NAME)
+
 
 def _get_collection():
-    client = chromadb.PersistentClient(
-        path=_DB_PATH,
-        settings=ChromaSettings(anonymized_telemetry=False),
-    )
-    return client.get_or_create_collection(name=_COLLECTION_NAME)
+    return _collection
 
 
 def _retrieve_tips_sync(query: str, course: str | None, n: int) -> list[str]:
