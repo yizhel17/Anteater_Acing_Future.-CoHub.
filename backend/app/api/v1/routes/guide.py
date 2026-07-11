@@ -2,11 +2,12 @@ import asyncio
 import logging
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, get_optional_user
+from app.core.rate_limit import guide_generate_limiter
 from app.models.guide import Guide
 from app.models.user import User
 from app.schemas.guide import (
@@ -26,11 +27,18 @@ async def _skip_search() -> tuple[list[str], str]:
     return [], ""
 
 
+async def check_rate_limit(request: Request) -> None:
+    key = request.client.host if request.client else "unknown"
+    if not await guide_generate_limiter.allow(key):
+        raise HTTPException(status_code=429, detail="Too many requests, please slow down")
+
+
 @router.post("/generate", response_model=GuideResponse)
 async def generate_guide_endpoint(
     body: GuideRequest,
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_optional_user),
+    _rl: None = Depends(check_rate_limit),
 ):
     try:
         courses = body.courses
