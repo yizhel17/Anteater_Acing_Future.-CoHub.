@@ -1,3 +1,33 @@
+/* Tailwind theme tokens + utilities, WITHOUT preflight — net-new pages
+   (login/register/history/contribute/admin) use these; theme.css alone only
+   defines CSS custom properties (spacing/color/shadow/radius/breakpoint
+   scale), it has no selectors, so it can't touch existing visual rules.
+   preflight.css is the one that resets h1-h6/lists/forms/etc. and is
+   deliberately skipped so the migrated wizard/result markup below — which
+   keeps its own hand-written reset — stays 100% visually unchanged. */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Fluid mesh-gradient blobs for the auth pages' brand panel (LoginPage/
+   RegisterPage). Base animation lives here since Tailwind has no utility for
+   a custom keyframe; each blob overrides duration/delay via Tailwind
+   arbitrary properties so they drift out of phase with each other. */
+@keyframes blob-float {
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+    50% {
+        transform: translate(6%, -8%) scale(1.15);
+    }
+    100% {
+        transform: translate(-8%, 10%) scale(0.9);
+    }
+}
+
+.blob-float {
+    animation: blob-float 18s ease-in-out infinite alternate;
+}
+
 /* ══════════════════════════════════════════
    VARIABLES
 ══════════════════════════════════════════ */

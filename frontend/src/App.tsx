@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import { GuideCard } from '@/components/result/GuideCard'
 import { AtomLoader } from '@/components/ui/AtomLoader'
@@ -9,6 +9,8 @@ import { StepCourses } from '@/components/wizard/StepCourses'
 import { StepGoals } from '@/components/wizard/StepGoals'
 import { StepIdentity } from '@/components/wizard/StepIdentity'
 import { getGuideErrorMessage, useGuide } from '@/hooks/useGuide'
+import { LoginPage } from '@/pages/LoginPage'
+import { RegisterPage } from '@/pages/RegisterPage'
 import { useWizardStore } from '@/store/wizardStore'
 import type { GuideRequest } from '@/types'
 
@@ -112,24 +114,37 @@ function Wizard() {
   )
 }
 
+function WizardPage() {
+  return (
+    <div className="container">
+      <div className="header-group">
+        <div className="badge">✦ Infinite possibility ahead</div>
+        <h1 className="english-title">
+          <span className="uci-blue">ACING YOUR</span> <span className="uci-gold">FUTURE</span>
+        </h1>
+        <p className="subtitle-main">Let's get you started.</p>
+        <p className="subtitle">Tell us where you are so we can guide you better.</p>
+      </div>
+
+      <Wizard />
+    </div>
+  )
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <div className="container">
-          <div className="header-group">
-            <div className="badge">✦ Infinite possibility ahead</div>
-            <h1 className="english-title">
-              <span className="uci-blue">ACING YOUR</span> <span className="uci-gold">FUTURE</span>
-            </h1>
-            <p className="subtitle-main">Let's get you started.</p>
-            <p className="subtitle">Tell us where you are so we can guide you better.</p>
-          </div>
-
-          <Routes>
-            <Route path="/" element={<Wizard />} />
-          </Routes>
-        </div>
+        <Routes>
+          <Route path="/" element={<WizardPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          {/* Milestones J/K/L routes (/history, /guide/:id, /contribute,
+              /admin/contributions) aren't built yet — catch-all keeps any
+              existing link to them (e.g. GuideCard's senior CTA) from
+              rendering a blank page in the meantime. */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </BrowserRouter>
     </QueryClientProvider>
   )

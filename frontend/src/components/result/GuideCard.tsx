@@ -21,7 +21,10 @@ function countMarkdownTables(markdown: string): number {
   let count = 0
   for (const rawLine of markdown.split('\n')) {
     const line = rawLine.trim()
-    if (line.includes('-') && /^\|?[\s:|-]+\|?$/.test(line)) count++
+    // A GFM table delimiter row always contains at least one `|` — that's what
+    // distinguishes it from a bare `---` thematic break (which the AI prompt
+    // template uses as a section divider and would otherwise be miscounted).
+    if (line.includes('-') && line.includes('|') && /^\|?[\s:|-]+\|?$/.test(line)) count++
   }
   return count
 }
