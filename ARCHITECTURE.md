@@ -3,7 +3,7 @@
 > 本文件是 AAF (Anteater Acing the Future) 项目从 Flask 单体应用向工业级全栈应用重构的架构总纲。
 > 所有重构阶段的目录结构、技术决策与工程规范均以本文件为准。
 >
-> **最后更新：** 2026-07-10（补充 Phase 3 管理员审核端点契约）
+> **最后更新：** 2026-07-12（新增日历订阅源端点：`calendar_token` / `GET /calendar/{token}.ics` / `GET /calendar/me/url`，详见 [extensions.md](extensions.md)）
 > **状态：** Phase 2 已完成，Phase 3 规划中
 
 ---
@@ -60,7 +60,8 @@ AAF_Product/                              ← Git Monorepo 根目录
 │   │   │           ├── auth.py           ← POST /auth/register, /auth/login, /auth/refresh
 │   │   │           ├── ratings.py        ← POST /ratings（满意度持久化）
 │   │   │           ├── contributions.py  ← POST /contributions（提交）+ 管理员审核（GET 列表 / approve / delete，需 admin 角色）
-│   │   │           └── courses.py        ← GET /courses（静态课程列表接口）
+│   │   │           ├── courses.py        ← GET /courses（静态课程列表接口）
+│   │   │           └── calendar.py           ← GET /calendar/{token}.ics（订阅源）+ GET /calendar/me/url
 │   │   │
 │   │   ├── core/
 │   │   │   ├── config.py                 ← Pydantic BaseSettings（读取全部环境变量）
@@ -79,12 +80,14 @@ AAF_Product/                              ← Git Monorepo 根目录
 │   │   ├── schemas/                      ← Pydantic v2 请求/响应 Schema（API 契约层）
 │   │   │   ├── auth.py                   ← RegisterRequest, LoginRequest, TokenResponse
 │   │   │   ├── guide.py                  ← GuideRequest, GuideResponse
+│   │   │   ├── calendar.py               ← CalendarUrlResponse
 │   │   │   └── rating.py                 ← RatingRequest, RatingResponse
 │   │   │
 │   │   └── services/                     ← 纯业务逻辑层（不持有 Request/Response 对象）
 │   │       ├── ai_service.py             ← Prompt 组装 + Claude 异步调用 + thinking 标签剥离
 │   │       ├── rag_service.py            ← ChromaDB 语义检索（asyncio.to_thread 包装）
-│   │       └── search_service.py         ← Tavily 异步封装（含 Bug 修复 + 来源标签）
+│   │       ├── search_service.py         ← Tavily 异步封装（含 Bug 修复 + 来源标签）
+│   │       └── calendar_service.py       ← Markdown 任务解析 + RFC 5545 .ics 生成
 │   │
 │   ├── chroma_db/                        ← ChromaDB 本地持久化目录（.gitignore 数据文件）
 │   │
@@ -272,6 +275,7 @@ async def generate_guide(
 | `display_name` | VARCHAR(100) | |
 | `role` | ENUM | `('student', 'senior', 'admin')` |
 | `is_verified` | BOOLEAN | DEFAULT FALSE |
+| `calendar_token` | VARCHAR(64) | UNIQUE, NULLABLE（首次请求 `/calendar/me/url` 时惰性生成） |
 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() |
 
 ### `guides` 表（AI 生成历史）
@@ -334,6 +338,8 @@ async def generate_guide(
 | `/api/v1/auth/refresh` | POST | 刷新 Access Token | None |
 | `/api/v1/auth/logout` | POST | 使 Refresh Token 失效 | Required |
 | `/api/v1/auth/me` | GET | 获取当前用户信息 | Required |
+| `/api/v1/calendar/{token}.ics` | GET | 日历订阅源（RFC 5545，含用户最新一份 guide 的任务） | Token in URL（非 JWT） |
+| `/api/v1/calendar/me/url` | GET | 获取当前用户的订阅链接（`ics_url` / `webcal_url`） | Required |
 | `/api/v1/health` | GET | 健康检查（DB + ChromaDB 连通性） | None |
 
 ### Guide 生成接口 Schema
