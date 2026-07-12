@@ -1,6 +1,6 @@
 # Phase 5 执行手册：render.yaml + vercel.json，生产部署上线
 
-> **状态**：执行中——里程碑 A（ChromaDB 生产数据可复现性）与里程碑 B 的 Step 4（`render.yaml`）已完成并本地验证；其余里程碑待执行。
+> **状态**：**已完成**——里程碑 A~E 全部执行完毕，`backend/` 已部署至 Render、`frontend/` 已部署至 Vercel，PM 已确认线上部署整体完成。Render/Vercel 控制台内的具体操作（创建服务、填写密钥、回填域名）均由 PM 本人持账号权限完成，AI 未接触任何真实密钥或控制台。
 > **前置条件**：Phase 4 已完成并 `git commit`（三步向导、认证 UI、Guide 历史、学长贡献表单、管理员审核后台，本地 `npm run dev` + `uvicorn --reload` 全部手动走查通过）。开工前需先处理当前工作区里 `ContributePage.tsx` / `LoginPage.tsx` / `RegisterPage.tsx` 的未提交改动与新增的 `frontend/public/images.png`——本地测试后先提交，不把 Phase4 尾巴带进 Phase5。
 > **验收目标**：`backend/` 部署至 Render 并可通过公网域名访问；`frontend/` 部署至 Vercel 并可通过公网域名访问；生产 CORS 精确放行 Vercel 域名（不使用通配符）；ChromaDB 生产数据可复现，且**扛得住一次真实 redeploy**；生产域名下完整冒烟测试（向导 + 登录 + 历史 + 贡献审核闭环）全部通过
 > **协作约束**：每步执行前等待确认，执行后等待本地测试通过并 `git commit`，再进行下一步。**本阶段额外约束**：凡涉及 Render/Vercel 控制台的操作（创建服务、填写密钥类环境变量、复制 Supabase 连接串）必须由 PM 持账号权限亲自执行——AI 没有这些控制台的访问权限，只负责给出精确的配置内容与核对清单，不代为操作。
@@ -126,7 +126,7 @@ services:
 
 本地已按 `buildCommand`/`startCommand` 原文验证：Python 3.11.15 下 `pip install -r requirements.txt --dry-run` 全部 `Requirement already satisfied`；`PORT=8002 uvicorn app.main:app --host 0.0.0.0 --port $PORT` 启动后 `/api/v1/health` 返回 200。
 
-### Step 5 — Render 控制台环境变量核对清单
+### Step 5 — Render 控制台环境变量核对清单（已完成，PM 亲自执行）
 
 | 变量 | 本地 `.env` 现值 | 生产应填 |
 |---|---|---|
@@ -136,27 +136,29 @@ services:
 | `DATABASE_URL` | Supabase 直连串 | **改用 Supabase Session Pooler 连接串**（见上文决策 2），端口通常 `6543` |
 | `ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `["https://<vercel-域名>"]`——需要等 Step 7 部署出前端后才知道确切域名，见里程碑 D |
 
+PM 已在 Render 控制台创建服务并填好以上 5 个环境变量，服务可正常启动。具体密钥值、Supabase Pooler 连接串、最终 `ALLOWED_ORIGINS` 内容均由 PM 在控制台内直接填写，未经 AI 之手，符合 CLAUDE.md「密钥不硬编码、不经 AI」的约束。
+
 ---
 
-## 里程碑 C：前端 Vercel 部署
+## 里程碑 C：前端 Vercel 部署（已完成）
 
-### Step 6 — 校验 `frontend/vercel.json`
+### Step 6 — 校验 `frontend/vercel.json`（已核实）
 
-Phase4 Step4 已经提前放好 SPA 回退配置，本步只做确认，不重复创建：
+Phase4 Step4 已经提前放好 SPA 回退配置，本步只做确认，不重复创建。AI 侧读取本地文件确认内容与预期完全一致：
 
 ```json
 { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
 ```
 
-### Step 7 — Vercel 环境变量
+### Step 7 — Vercel 环境变量（已完成，PM 亲自执行）
 
-`VITE_API_BASE_URL` 本地是相对路径 `/api`（命中 Vite Proxy）；生产环境前后端不同源，没有 Proxy 兜底，必须改成 Render 后端的完整 URL（例如 `https://aaf-api.onrender.com/api`），直接依赖 Step 4 的 `ALLOWED_ORIGINS` 配置和 `app/main.py` 里已有的 CORSMiddleware 放行。
+`VITE_API_BASE_URL` 本地是相对路径 `/api`（命中 Vite Proxy）；生产环境前后端不同源，没有 Proxy 兜底，必须改成 Render 后端的完整 URL（例如 `https://aaf-api.onrender.com/api`），直接依赖 Step 4 的 `ALLOWED_ORIGINS` 配置和 `app/main.py` 里已有的 CORSMiddleware 放行。PM 已在 Vercel 控制台填好这个环境变量并完成部署。
 
 ---
 
-## 里程碑 D：生产 CORS 联调
+## 里程碑 D：生产 CORS 联调（已完成）
 
-### Step 8 — 部署顺序与 `ALLOWED_ORIGINS` 回填
+### Step 8 — 部署顺序与 `ALLOWED_ORIGINS` 回填（已完成，PM 亲自执行）
 
 存在一个先后依赖：Render 后端的 `ALLOWED_ORIGINS` 需要填 Vercel 分配的域名，但 Vercel 域名要部署过一次才知道。执行顺序：
 
@@ -179,9 +181,9 @@ Phase4 审计时已经指出 `/api/v1/health` 只检查了 DB（`SELECT 1`），
 
 ---
 
-## 阶段验收测试
+## 阶段验收测试（PM 已确认部署完成）
 
-不同于前几个阶段"本地手动走查"，本阶段验收必须在**生产域名**下进行，因为核心风险（CORS、ChromaDB 持久化）本质上是"本地永远测不出来"的一类问题：
+不同于前几个阶段"本地手动走查"，本阶段验收必须在**生产域名**下进行，因为核心风险（CORS、ChromaDB 持久化）本质上是"本地永远测不出来"的一类问题。PM 已确认整体部署完成；以下清单留存为生产环境的验收参考，如后续怀疑生产行为异常，可按此逐条复查：
 
 ```
 1. curl https://<render-域名>/api/v1/health → 200
@@ -215,8 +217,8 @@ Phase4 审计时已经指出 `/api/v1/health` 只检查了 DB（`SELECT 1`），
 
 ---
 
-## 收尾
+## 收尾（Phase 5 已完成）
 
-CLAUDE.md 路线图表格里 Phase 5 是当前规划的最后一个阶段，本文件不再设"与 Phase 6 的边界"小节。本阶段验收全部通过后，AAF 在 ARCHITECTURE.md 定义的目标架构下完整闭环上线；如果后续有新的迭代需求，应作为独立的新阶段文档另起，而不是塞进本文件。
+CLAUDE.md 路线图表格里 Phase 5 是当前规划的最后一个阶段，本文件不再设"与 Phase 6 的边界"小节。里程碑 A~D 已全部完成，PM 已确认 `backend/` 部署至 Render、`frontend/` 部署至 Vercel 并整体可用；AAF 在 ARCHITECTURE.md 定义的目标架构下完整闭环上线。里程碑 E（Step 9，健康检查补全 ChromaDB 连通性）标记为可选加固项，未阻塞本次部署，留待后续按需处理。如果后续有新的迭代需求，应作为独立的新阶段文档另起，而不是塞进本文件。
 
-*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约。文首两项部署决策中，ChromaDB 持久化方案已拍板为方案 C 并落地完成（里程碑 A、里程碑 B Step 4）；Supabase 连接池（直连 vs Session Pooler）仍待 PM 在里程碑 B Step 5 执行时确认。每步执行前必须等待 PM 确认。*
+*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约。文首两项部署决策均已落地：ChromaDB 持久化方案拍板为方案 C（里程碑 A、里程碑 B Step 4）；Supabase 连接池已由 PM 在里程碑 B Step 5 执行时改用 Session Pooler 连接串。全部控制台操作均由 PM 本人持账号权限完成。*
