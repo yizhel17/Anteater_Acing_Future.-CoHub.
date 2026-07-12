@@ -10,13 +10,15 @@ from app.api.deps import get_current_user, get_db, get_optional_user
 from app.core.rate_limit import guide_generate_limiter
 from app.models.guide import Guide
 from app.models.user import User
+from app.schemas.export import DocxExportResponse
 from app.schemas.guide import (
     GuideHistoryItem,
     GuideHistoryResponse,
     GuideRequest,
     GuideResponse,
 )
-from app.services import ai_service, rag_service, search_service
+from app.services import ai_service, docs_export_service, rag_service, search_service
+from app.services.calendar_service import parse_markdown_tasks
 
 logger = logging.getLogger(__name__)
 
@@ -188,3 +190,22 @@ async def get_guide(
         tips_count=0,
         tokens_used=guide.tokens_used or 0,
     )
+
+
+@router.post("/{guide_id}/export/docx", response_model=DocxExportResponse)
+async def export_guide_docx(
+    guide_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    guide = await db.get(Guide, guide_id)
+    if guide is None:
+        raise HTTPException(status_code=404, detail="Guide not found")
+
+    tasks = parse_markdown_tasks(guide.response_md) if guide.response_md else []
+    file_bytes = docs_export_service.build_docx(tasks)
+
+    expires_in = 600
+    download_url = await docs_export_service.upload_and_sign(
+        f"{guide_id}.docx", file_bytes, expires_in=expires_in
+    )
+    return DocxExportResponse(download_url=download_url, expires_in=expires_in)
