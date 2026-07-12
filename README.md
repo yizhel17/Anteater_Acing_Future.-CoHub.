@@ -276,4 +276,4 @@ AAF_Product/
 
 ---
 
-<p align="center"><sub>Designed, built and engineered by Yizhe Lan, an currently software engineering student from UC Irvine who carries a heart for creating real-user products.</sub></p>
+<p align="center"><sub>Designed, built, and engineered by Yizhe Lan — currently a software engineering student at UC Irvine with a heart for building real-user products.</sub></p>

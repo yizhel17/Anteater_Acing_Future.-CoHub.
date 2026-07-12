@@ -29,7 +29,7 @@ export function StepIdentity({ visible, onNext }: StepIdentityProps) {
 
   return (
     <div className={stepClassName} id="step-1">
-      <p className="step-question">First, who are you?</p>
+      <p className="step-question">First, what best describes you?</p>
       <p className="step-hint">Pick the one that fits — we'll tailor everything from here.</p>
 
       <div className="role-grid">
