@@ -2,9 +2,10 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 
+import { getErrorMessage } from '@/api/errorMessages'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { UCI_COURSES } from '@/data/courses'
-import { getContributionErrorMessage, useSubmitContribution } from '@/hooks/useContributions'
+import { useSubmitContribution } from '@/hooks/useContributions'
 
 // 纯净质感：输入框在米色宣纸上使用纯白底色，提供极致的阅读与输入清晰度
 const inputClassName =
@@ -161,7 +162,7 @@ export function ContributePage() {
                   />
                 </div>
 
-                {isError && <ErrorBanner message={getContributionErrorMessage(error)} />}
+                {isError && <ErrorBanner message={getErrorMessage(error)} />}
 
                 <button
                   type="submit"

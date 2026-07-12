@@ -1,5 +1,4 @@
 import { useMutation } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 
 import { login, logout as apiLogout, me, register } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
@@ -52,14 +51,4 @@ export function useAuth() {
     registerError: registerMutation.error,
     logout,
   }
-}
-
-export function getAuthErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const detail = error.response?.data?.detail
-    if (typeof detail === 'string') return detail
-    if (!error.response) return `Network error: ${error.message}. Is the backend running?`
-  }
-  if (error instanceof Error) return error.message
-  return 'Something went wrong. Please try again.'
 }

@@ -2,13 +2,14 @@ import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 
+import { getErrorMessage } from '@/api/errorMessages'
 import { GuideCard } from '@/components/result/GuideCard'
 import { AtomLoader } from '@/components/ui/AtomLoader'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { StepCourses } from '@/components/wizard/StepCourses'
 import { StepGoals } from '@/components/wizard/StepGoals'
 import { StepIdentity } from '@/components/wizard/StepIdentity'
-import { getGuideErrorMessage, useGuide } from '@/hooks/useGuide'
+import { useGuide } from '@/hooks/useGuide'
 import { AdminContributionsPage } from '@/pages/AdminContributionsPage'
 import { ContributePage } from '@/pages/ContributePage'
 import { GuideDetailPage } from '@/pages/GuideDetailPage'
@@ -94,7 +95,7 @@ function Wizard() {
       {isError && (
         <div className="ai-response-wrap" id="aafResult" style={{ display: 'block' }}>
           <div className="ai-response-body" id="aafBody">
-            <p style={{ fontWeight: 700, color: '#c0392b', marginBottom: 12 }}>⚠️ {getGuideErrorMessage(error)}</p>
+            <p style={{ fontWeight: 700, color: '#c0392b', marginBottom: 12 }}>⚠️ {getErrorMessage(error)}</p>
             <button
               type="button"
               onClick={() => resetMutation()}

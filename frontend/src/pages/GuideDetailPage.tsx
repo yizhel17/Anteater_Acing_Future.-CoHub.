@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { getErrorMessage } from '@/api/errorMessages'
 import { GuideCard } from '@/components/result/GuideCard'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useGuideDetail } from '@/hooks/useGuide'
@@ -29,7 +30,7 @@ function GuideDetailSkeleton() {
 export function GuideDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { data, isPending, isError } = useGuideDetail(id)
+  const { data, isPending, isError, error } = useGuideDetail(id)
 
   return (
     <div className="min-h-screen w-full bg-[var(--xuan-paper)] px-6 py-12">
@@ -54,9 +55,7 @@ export function GuideDetailPage() {
 
         {isPending && <GuideDetailSkeleton />}
 
-        {isError && (
-          <ErrorBanner message="Unable to load this guide. Please try again later or check your connection." />
-        )}
+        {isError && <ErrorBanner message={getErrorMessage(error)} />}
 
         {data && <GuideCard guideId={data.guide_id} markdown={data.guide_markdown} onReset={() => navigate('/')} />}
       </div>

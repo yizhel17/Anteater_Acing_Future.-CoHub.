@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { getErrorMessage } from '@/api/errorMessages'
 import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { useGuideHistory } from '@/hooks/useGuide'
 import type { GuideHistoryItem } from '@/types'
@@ -61,7 +62,7 @@ function HistoryRow({ item, onNavigate }: { item: GuideHistoryItem; onNavigate: 
 
 export function GuideHistoryPage() {
   const navigate = useNavigate()
-  const { data, isPending, isError } = useGuideHistory()
+  const { data, isPending, isError, error } = useGuideHistory()
 
   return (
     <div className="min-h-screen w-full bg-[var(--xuan-paper)] py-12 px-6">
@@ -98,7 +99,7 @@ export function GuideHistoryPage() {
 
         {isError ? (
           <div className="px-4">
-            <ErrorBanner message="Unable to load history. Please try again later or check your connection." />
+            <ErrorBanner message={getErrorMessage(error)} />
           </div>
         ) : (
           <div className="flex flex-col">

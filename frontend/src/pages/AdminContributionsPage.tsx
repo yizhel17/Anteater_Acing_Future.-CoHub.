@@ -1,3 +1,4 @@
+import { getErrorMessage } from '@/api/errorMessages'
 import { useAuth } from '@/hooks/useAuth'
 import { useApproveContribution, usePendingContributions, useRejectContribution } from '@/hooks/useContributions'
 
@@ -5,7 +6,7 @@ export function AdminContributionsPage() {
   const { user } = useAuth()
   const isAdmin = user?.role === 'admin'
 
-  const { data, isPending, isError } = usePendingContributions(isAdmin)
+  const { data, isPending, isError, error } = usePendingContributions(isAdmin)
   const approve = useApproveContribution()
   const reject = useRejectContribution()
   const mutating = approve.isPending || reject.isPending
@@ -22,7 +23,7 @@ export function AdminContributionsPage() {
     <div className="min-h-screen bg-gray-50 p-8">
       <h1 className="mb-6 text-xl font-bold text-gray-900">Pending Contributions</h1>
 
-      {isError && <p className="text-red-600">Failed to load contributions. Please try again later.</p>}
+      {isError && <p className="text-red-600">{getErrorMessage(error)}</p>}
       {isPending && <p className="text-gray-500">Loading…</p>}
       {data && data.length === 0 && <p className="text-gray-500">No pending contributions.</p>}
 

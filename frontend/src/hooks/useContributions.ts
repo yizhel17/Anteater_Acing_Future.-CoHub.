@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { isAxiosError } from 'axios'
 
 import {
   approveContribution,
@@ -39,14 +38,4 @@ export function useRejectContribution() {
     mutationFn: rejectContribution,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PENDING_CONTRIBUTIONS_KEY }),
   })
-}
-
-export function getContributionErrorMessage(error: unknown): string {
-  if (isAxiosError(error)) {
-    const detail = error.response?.data?.detail
-    if (typeof detail === 'string') return detail
-    if (!error.response) return `Network error: ${error.message}. Is the backend running?`
-  }
-  if (error instanceof Error) return error.message
-  return 'Something went wrong. Please try again.'
 }

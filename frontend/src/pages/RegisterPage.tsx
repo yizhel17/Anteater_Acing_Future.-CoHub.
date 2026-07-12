@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getAuthErrorMessage, useAuth } from '@/hooks/useAuth'
+import { getErrorMessage } from '@/api/errorMessages'
+import { useAuth } from '@/hooks/useAuth'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -109,7 +110,7 @@ export function RegisterPage() {
               </div>
             </div>
 
-            {registerError && <p className="text-center !text-xs text-red-500">{getAuthErrorMessage(registerError)}</p>}
+            {registerError && <p className="text-center !text-xs text-red-500">{getErrorMessage(registerError)}</p>}
 
             <button
               type="submit"
