@@ -58,6 +58,14 @@ def _reset_rate_limiter():
     guide_generate_limiter._hits.clear()
 
 
+@pytest.fixture(autouse=True)
+def _skip_rag_reseed():
+    # lifespan_context runs the real startup hook, which would otherwise hit
+    # Supabase and rewrite the local ChromaDB on every test.
+    with patch("app.main.reseed_from_supabase", AsyncMock(return_value=0)):
+        yield
+
+
 GENERATE_PAYLOAD = {
     "role": "student",
     "courses": ["ICS 32"],

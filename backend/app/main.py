@@ -16,6 +16,7 @@ from app.api.deps import get_db
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.db.session import async_engine
+from scripts.load_rag_data import reseed_from_supabase
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,10 @@ async def lifespan(app: FastAPI):
     async with async_engine.connect() as conn:
         await conn.execute(text("SELECT 1"))
     logger.info("AAF FastAPI starting up — DB OK")
+
+    tip_count = await reseed_from_supabase()
+    logger.info("ChromaDB reseeded with %d tips from Supabase", tip_count)
+
     yield
     await async_engine.dispose()
     logger.info("AAF FastAPI shut down.")

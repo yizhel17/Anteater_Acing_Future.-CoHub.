@@ -82,14 +82,12 @@ async def approve_contribution(
     contribution.is_approved = True
     await db.flush()
 
-    text_parts = [f"Course: {contribution.course}"]
-    if contribution.danger_zone:
-        text_parts.append(f"Danger Zone: {contribution.danger_zone}")
-    if contribution.setup_tips:
-        text_parts.append(f"Setup Tips: {contribution.setup_tips}")
-    if contribution.career_value:
-        text_parts.append(f"Career Value: {contribution.career_value}")
-    text = "\n".join(text_parts)
+    text = rag_service.build_tip_text(
+        contribution.course,
+        contribution.danger_zone,
+        contribution.setup_tips,
+        contribution.career_value,
+    )
     await rag_service.add_tip_async(str(contribution.id), contribution.course, text)
 
     return ContributionResponse(
