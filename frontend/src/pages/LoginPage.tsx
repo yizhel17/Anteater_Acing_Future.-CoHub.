@@ -15,7 +15,7 @@ export function LoginPage() {
 
   return (
     // 外层容器：深邃的红褐色打底，包裹所有流体效果
-    <div className="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#2D0D04] px-4 py-10">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#2D0D04] px-4 py-10">
       
       {/* === 动态流体背景层 (Fluid Mesh Gradient) === */}
       {/* 巨型模糊光斑，在底层无限缓慢游走交融 */}

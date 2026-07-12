@@ -6,14 +6,13 @@ import { ErrorBanner } from '@/components/ui/ErrorBanner'
 import { UCI_COURSES } from '@/data/courses'
 import { getContributionErrorMessage, useSubmitContribution } from '@/hooks/useContributions'
 
-// 保持半透明磨砂质感
+// 纯净质感：输入框在米色宣纸上使用纯白底色，提供极致的阅读与输入清晰度
 const inputClassName =
-  'w-full rounded-xl border border-[var(--border-ink)]/20 bg-white/50 px-5 py-3.5 text-[15px] text-[var(--ink-black)] outline-none transition-all placeholder:text-gray-400 focus:bg-white focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/10'
+  'w-full rounded-xl border border-[var(--border-ink)]/20 bg-white px-5 py-3.5 text-[15px] text-[var(--ink-black)] outline-none transition-all placeholder:text-gray-400 focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/10'
 
 const labelClassName = 'mb-2 flex items-center gap-1.5 text-[15px] font-bold text-[var(--ink-black)] tracking-wide'
 
 export function ContributePage() {
-  // 核心逻辑升级：将 course 拆分为“下拉选择”和“自定义输入”两个状态
   const [courseSelect, setCourseSelect] = useState('')
   const [customCourse, setCustomCourse] = useState('')
   
@@ -23,7 +22,6 @@ export function ContributePage() {
 
   const { mutate, isPending, isError, error, isSuccess } = useSubmitContribution()
 
-  // 动态计算最终提交的 course 值
   const finalCourse = courseSelect === 'other' ? customCourse.trim() : courseSelect.trim()
 
   function handleSubmit(e: FormEvent) {
@@ -38,13 +36,12 @@ export function ContributePage() {
   }
 
   return (
+    // 恢复无照片状态：全屏无缝平铺 var(--xuan-paper) 米色大背景
     <div className="min-h-screen w-full bg-[var(--xuan-paper)] px-6 py-12">
+      {/* 限制表单最大宽度，带来完美的空间感与呼吸感 */}
       <div className="mx-auto max-w-2xl">
         
-        {/* 
-          1. 按钮升级：复刻蓝调渐变方框
-          使用 rounded-lg、px-8 py-3.5 保持方正硬朗，并加入了一个向左的动态小箭头 
-        */}
+        {/* 蓝调渐变方框返回按钮 */}
         <Link
           to="/"
           className="group mb-12 inline-flex w-fit items-center gap-3 rounded-lg bg-gradient-to-r from-sky-200 to-blue-300 px-8 py-3.5 text-[15px] font-bold tracking-wide text-[var(--ink-black)] no-underline shadow-sm transition-all hover:from-sky-300 hover:to-blue-400 hover:shadow-md hover:-translate-y-0.5 hover:no-underline"
@@ -72,7 +69,10 @@ export function ContributePage() {
             </div>
           ) : (
             <>
-              <h1 className="mb-3 text-4xl font-extrabold tracking-tight text-[var(--ink-black)]">Join As a Contributor</h1>
+              {/* 大标题排版与 GuideHistoryPage 完全对齐，自然融入大背景 */}
+              <h1 className="mb-3 text-4xl font-extrabold tracking-tight text-[var(--ink-black)]">
+                Join As a Contributor
+              </h1>
               <p className="mb-10 text-base font-medium text-[var(--ink-mid)]">
                 Share what you wish you knew in your freshman year — it gets folded into the guide for students taking this course next.
               </p>
@@ -83,7 +83,7 @@ export function ContributePage() {
                     <span>📚</span> Course Name
                   </label>
                   
-                  {/* 2. 混合式菜单：下拉框 */}
+                  {/* 混合式菜单 */}
                   <select
                     id="course"
                     value={courseSelect}
@@ -100,7 +100,7 @@ export function ContributePage() {
                     <option value="other">✨ Other (Type your own)</option>
                   </select>
 
-                  {/* 如果选择了 Other，则丝滑呈现文本输入框 */}
+                  {/* Other 文本输入框 */}
                   {courseSelect === 'other' && (
                     <div className="mt-3 animate-in fade-in slide-in-from-top-2 duration-300">
                       <input

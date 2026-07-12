@@ -16,7 +16,7 @@ export function RegisterPage() {
 
   return (
     // 外层容器：深邃的红褐色打底，包裹所有流体效果
-    <div className="relative flex min-h-screen w-screen items-center justify-center overflow-hidden bg-[#2D0D04] px-4 py-10">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-[#2D0D04] px-4 py-10">
       
       {/* === 动态流体背景层 (Fluid Mesh Gradient) === */}
       <div className="absolute -left-[10%] -top-[10%] h-[70vh] w-[70vw] rounded-full bg-[var(--accent)]/50 blur-[130px] [animation:blob-float_25s_linear_infinite_alternate]" />
