@@ -19,7 +19,7 @@
 
 ### 前端
 - 独立 React 工程（**React 18 + Vite + TypeScript**），位于 `frontend/` 目录
-- **视觉 100% 还原铁律**：必须完美复用原 `templates/index.html` 的所有 CSS 类名、Tailwind 样式和 SVG 动画，**禁止擅自修改任何现有 UI 的视觉表现**
+- **视觉 100% 还原铁律**：必须完美复用原 `docs/legacy/templates/index.html`（Phase 4 迁移前的 Flask 模板，现归档于此供查阅）的所有 CSS 类名、Tailwind 样式和 SVG 动画，**禁止擅自修改任何现有 UI 的视觉表现**
 - 状态管理：TanStack Query + Zustand
 - Markdown 渲染：react-markdown
 
