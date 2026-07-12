@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom'
 
 import { GuideCard } from '@/components/result/GuideCard'
 import { AtomLoader } from '@/components/ui/AtomLoader'
@@ -15,6 +15,7 @@ import { GuideDetailPage } from '@/pages/GuideDetailPage'
 import { GuideHistoryPage } from '@/pages/GuideHistoryPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
+import { useAuthStore } from '@/store/authStore'
 import { useWizardStore } from '@/store/wizardStore'
 import type { GuideRequest } from '@/types'
 
@@ -135,18 +136,43 @@ function WizardPage() {
   )
 }
 
+function RequireAuth() {
+  const isAuthenticated = useAuthStore((s) => !!s.accessToken)
+  const location = useLocation()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+  return <Outlet />
+}
+
+function RedirectIfAuthed() {
+  const isAuthenticated = useAuthStore((s) => !!s.accessToken)
+
+  if (isAuthenticated) {
+    return <Navigate to="/" replace />
+  }
+  return <Outlet />
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<WizardPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/history" element={<GuideHistoryPage />} />
-          <Route path="/guide/:id" element={<GuideDetailPage />} />
-          <Route path="/contribute" element={<ContributePage />} />
-          <Route path="/admin/contributions" element={<AdminContributionsPage />} />
+          <Route element={<RedirectIfAuthed />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+          </Route>
+
+          <Route element={<RequireAuth />}>
+            <Route path="/" element={<WizardPage />} />
+            <Route path="/history" element={<GuideHistoryPage />} />
+            <Route path="/guide/:id" element={<GuideDetailPage />} />
+            <Route path="/contribute" element={<ContributePage />} />
+            <Route path="/admin/contributions" element={<AdminContributionsPage />} />
+          </Route>
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

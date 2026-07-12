@@ -3,8 +3,10 @@ import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
 import type { TokenResponse } from '@/types'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL,
+  baseURL: API_BASE_URL,
 })
 
 client.interceptors.request.use((config) => {
@@ -25,7 +27,7 @@ async function refreshAccessToken(): Promise<string | null> {
   }
   try {
     const { data } = await axios.post<TokenResponse>(
-      `${import.meta.env.VITE_API_BASE_URL}/v1/auth/refresh`,
+      `${API_BASE_URL}/v1/auth/refresh`,
       { refresh_token: refreshToken },
     )
     setAuth({ accessToken: data.access_token, refreshToken: data.refresh_token, user })
