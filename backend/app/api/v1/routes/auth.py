@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.services import email_service
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,11 @@ def _issue_tokens(user_id: uuid.UUID) -> TokenResponse:
 
 
 @router.post("/register", response_model=TokenResponse)
-async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
+async def register(
+    body: RegisterRequest,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     existing = await db.execute(select(User).where(User.email == str(body.email)))
     if existing.scalar_one_or_none():
         raise HTTPException(
@@ -45,6 +50,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     )
     db.add(user)
     await db.flush()
+
+    background_tasks.add_task(email_service.send_welcome_email, user.email, user.display_name)
 
     return _issue_tokens(user.id)
 

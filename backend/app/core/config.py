@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
     SUPABASE_STORAGE_BUCKET: str = "study-plan-exports"
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM_ADDRESS: str = "AAF <onboarding@resend.dev>"
 
 
 settings = Settings()
