@@ -43,12 +43,12 @@ export function GuideCard({ guideId, markdown, role, onReset }: GuideCardProps) 
         return (
           <>
             <table {...props} />
-            {isLastTable && <ExportMenu containerRef={bodyRef} />}
+            {isLastTable && <ExportMenu containerRef={bodyRef} guideId={guideId} />}
           </>
         )
       },
     }),
-    [totalTables],
+    [totalTables, guideId],
   )
 
   return (

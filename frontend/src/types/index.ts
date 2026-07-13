@@ -87,3 +87,13 @@ export interface ContributionResponse {
   is_approved: boolean
   created_at: string
 }
+
+export interface CalendarUrlResponse {
+  ics_url: string
+  webcal_url: string
+}
+
+export interface DocxExportResponse {
+  download_url: string
+  expires_in: number
+}

@@ -1,5 +1,5 @@
 import client from '@/api/client'
-import type { GuideHistoryResponse, GuideRequest, GuideResponse } from '@/types'
+import type { DocxExportResponse, GuideHistoryResponse, GuideRequest, GuideResponse } from '@/types'
 
 export async function generateGuide(req: GuideRequest): Promise<GuideResponse> {
   const { data } = await client.post<GuideResponse>('/v1/guide/generate', req)
@@ -18,5 +18,10 @@ export async function getGuideHistory(
 
 export async function getGuide(id: string): Promise<GuideResponse> {
   const { data } = await client.get<GuideResponse>(`/v1/guide/${id}`)
+  return data
+}
+
+export async function exportGuideDocx(guideId: string): Promise<DocxExportResponse> {
+  const { data } = await client.post<DocxExportResponse>(`/v1/guide/${guideId}/export/docx`)
   return data
 }
