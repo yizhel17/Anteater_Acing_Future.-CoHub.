@@ -3,7 +3,7 @@
 > 本文件是 AAF (Anteater Acing the Future) 项目从 Flask 单体应用向工业级全栈应用重构的架构总纲。
 > 所有重构阶段的目录结构、技术决策与工程规范均以本文件为准。
 >
-> **最后更新：** 2026-07-12（新增日历订阅源端点：`calendar_token` / `GET /calendar/{token}.ics` / `GET /calendar/me/url`，详见 [extensions.md](extensions.md)）
+> **最后更新：** 2026-07-12（新增注册欢迎邮件：`BackgroundTasks` + Jinja2 模板 + Resend `send_async()` 原生异步发信，详见 [extensions.md](extensions.md)）
 > **状态：** Phase 2 已完成，Phase 3 规划中
 
 ---
@@ -81,13 +81,19 @@ AAF_Product/                              ← Git Monorepo 根目录
 │   │   │   ├── auth.py                   ← RegisterRequest, LoginRequest, TokenResponse
 │   │   │   ├── guide.py                  ← GuideRequest, GuideResponse
 │   │   │   ├── calendar.py               ← CalendarUrlResponse
+│   │   │   ├── export.py                ← DocxExportResponse
 │   │   │   └── rating.py                 ← RatingRequest, RatingResponse
 │   │   │
-│   │   └── services/                     ← 纯业务逻辑层（不持有 Request/Response 对象）
+│   │   ├── services/                     ← 纯业务逻辑层（不持有 Request/Response 对象）
 │   │       ├── ai_service.py             ← Prompt 组装 + Claude 异步调用 + thinking 标签剥离
 │   │       ├── rag_service.py            ← ChromaDB 语义检索（asyncio.to_thread 包装）
 │   │       ├── search_service.py         ← Tavily 异步封装（含 Bug 修复 + 来源标签）
-│   │       └── calendar_service.py       ← Markdown 任务解析 + RFC 5545 .ics 生成
+│   │       ├── calendar_service.py       ← Markdown 任务解析 + RFC 5545 .ics 生成
+│   │       ├── docs_export_service.py  ← python-docx 生成 + Supabase Storage 上传 + Presigned URL
+│   │       └── email_service.py          ← Jinja2 模板渲染 + Resend send_async() 发信
+│   │
+│   │   └── templates/
+│   │       └── welcome_email.html        ← Jinja2 欢迎邮件模板
 │   │
 │   ├── chroma_db/                        ← ChromaDB 本地持久化目录（.gitignore 数据文件）
 │   │
@@ -155,6 +161,9 @@ AAF_Product/                              ← Git Monorepo 根目录
 │   ├── tsconfig.json
 │   ├── package.json
 │   └── vercel.json                       ← Vercel SPA 路由回退配置
+│
+├── templates/
+│   └── welcome_email.html    ← Jinja2 欢迎邮件模板
 │
 ├── .gitignore                            ← 覆盖 .env、chroma_db/、node_modules/、venv/、__pycache__/
 ├── ARCHITECTURE.md                       ← 本文件：架构总纲
@@ -333,13 +342,14 @@ async def generate_guide(
 | `/api/v1/contributions/{id}/approve` | POST | 管理员批准，同步写入 ChromaDB | Required (admin) |
 | `/api/v1/contributions/{id}` | DELETE | 管理员驳回（直接删除记录） | Required (admin) |
 | `/api/v1/courses` | GET | 获取支持的 UCI 课程列表 | None |
-| `/api/v1/auth/register` | POST | 邮箱注册 | None |
+| `/api/v1/auth/register` | POST | 邮箱注册（后台异步派发欢迎邮件，不阻塞响应） | None |
 | `/api/v1/auth/login` | POST | 邮箱登录，返回 Token | None |
 | `/api/v1/auth/refresh` | POST | 刷新 Access Token | None |
 | `/api/v1/auth/logout` | POST | 使 Refresh Token 失效 | Required |
 | `/api/v1/auth/me` | GET | 获取当前用户信息 | Required |
 | `/api/v1/calendar/{token}.ics` | GET | 日历订阅源（RFC 5545，含用户最新一份 guide 的任务） | Token in URL（非 JWT） |
 | `/api/v1/calendar/me/url` | GET | 获取当前用户的订阅链接（`ics_url` / `webcal_url`） | Required |
+| `/api/v1/guide/{guide_id}/export/docx` | POST | 生成 `.docx`（内存生成，上传 Supabase Storage），返回 Presigned URL | Optional |
 | `/api/v1/health` | GET | 健康检查（DB + ChromaDB 连通性） | None |
 
 ### Guide 生成接口 Schema

@@ -1,57 +1,57 @@
-# Phase 3 执行手册：历史记录 + 学长贡献审核流 + 限流 + 测试
+# Phase 3 Execution Manual: History + Senior Contribution Review Flow + Rate Limiting + Tests
 
-> **状态**：待执行
-> **前置条件**：Phase 2 已完成并 `git commit`（JWT 鉴权、Supabase 持久化、`/ratings`、`/health` DB ping 均已验证）
-> **验收目标**：登录用户可查看自己的 Guide 历史；学长经验提交 → 管理员审核 → 同步至 ChromaDB 的完整闭环打通；`/guide/generate` 具备防滥用限流；核心安全与业务逻辑有自动化测试覆盖
-> **协作约束**：每步执行前等待确认，执行后等待本地测试通过并 `git commit`，再进行下一步
-
----
-
-## ⚠️ 需要 PM 确认的契约扩展
-
-ARCHITECTURE.md §6 的端点契约表只声明了 `POST /contributions`（提交），没有声明管理员审核所需的查询/批准/驳回端点。要完成 PHASE2.md 里程碑约定的"管理员审核流"，本阶段会新增 3 个 ARCHITECTURE.md 尚未记录的端点（见里程碑 F）。这些端点确认后，需要同步补写进 ARCHITECTURE.md §6，保持文档与代码的契约一致——这一点会作为本阶段最后一步单独提出，不在下面的 18 个 Step 里，等前面步骤全部验收通过后再做。
+> **Status**: Pending
+> **Prerequisite**: Phase 2 completed and `git commit`ed (JWT auth, Supabase persistence, `/ratings`, and the `/health` DB ping have all been verified)
+> **Acceptance goal**: Logged-in users can view their own Guide history; the full loop of senior-experience submission → admin review → sync to ChromaDB is wired up end-to-end; `/guide/generate` has anti-abuse rate limiting; core security and business logic have automated test coverage
+> **Collaboration constraint**: Wait for confirmation before each step; after execution, wait for local tests to pass and a `git commit` before moving to the next step
 
 ---
 
-## 与 Phase 2 的边界对照
+## ⚠️ Contract Extension Requiring PM Confirmation
 
-| 功能 | Phase 2 状态 | Phase 3 完成 |
+ARCHITECTURE.md §6's endpoint contract table only declares `POST /contributions` (submission) — it doesn't declare the query/approve/reject endpoints needed for admin review. To complete the "admin review flow" agreed upon in PHASE2.md's milestones, this phase adds 3 endpoints not yet recorded in ARCHITECTURE.md (see Milestone F). Once these endpoints are confirmed, they need to be written back into ARCHITECTURE.md §6 to keep the documentation and code contracts in sync — this will be raised separately as the final step of this phase, not among the 18 steps below, and done only after all the preceding steps have passed acceptance.
+
+---
+
+## Boundary Comparison with Phase 2
+
+| Feature | Phase 2 State | Phase 3 Completion |
 |---|---|---|
-| `/guide/history` | 未实现 | `GET /guide/history` 分页查询（需登录） |
-| `/guide/{id}` | 未实现 | `GET /guide/{id}` 单条详情（匿名可访问，分享链接语义） |
-| `contributions` 表 | 未创建 | 建表 + `POST /contributions` 持久化 |
-| 学长经验审核 | 无 | 管理员列表/批准/驳回 + 批准后同步至 ChromaDB |
-| `/guide/generate` 滥用防护 | 无限流，任何人可无限调用（真实扣费） | `asyncio.Lock` 滑动窗口限流（按 IP） |
-| 单元/集成测试 | 无 | `test_security.py` + `test_ai_service.py` + `test_guide_route.py` |
-| `/auth/logout` | 无状态（客户端删除 token） | 维持无状态；黑名单方案列为可选里程碑，默认不做 |
+| `/guide/history` | Not implemented | `GET /guide/history` paginated query (requires login) |
+| `/guide/{id}` | Not implemented | `GET /guide/{id}` single-item detail (anonymous access, share-link semantics) |
+| `contributions` table | Not created | Table created + `POST /contributions` persistence |
+| Senior-experience review | None | Admin list/approve/reject + sync to ChromaDB upon approval |
+| `/guide/generate` abuse protection | No rate limit, anyone can call it unlimited times (real billing cost) | `asyncio.Lock` sliding-window rate limit (by IP) |
+| Unit/integration tests | None | `test_security.py` + `test_ai_service.py` + `test_guide_route.py` |
+| `/auth/logout` | Stateless (client deletes token) | Remains stateless; blacklist approach listed as an optional milestone, not done by default |
 
 ---
 
-## 里程碑 A：测试基础设施
+## Milestone A: Test Infrastructure
 
-### Step 1 — 更新 `backend/requirements.txt`
+### Step 1 — Update `backend/requirements.txt`
 
-新增：
+Add:
 
 ```
 pytest
 pytest-asyncio
 ```
 
-不引入 `pytest-mock`——用标准库 `unittest.mock.patch` 已够用，避免多一个依赖。
+Do not introduce `pytest-mock` — the standard library's `unittest.mock.patch` is already sufficient, avoiding one extra dependency.
 
 ---
 
-## 里程碑 B：Supabase 表结构扩展
+## Milestone B: Supabase Schema Extension
 
-### Step 2 — 在 Supabase SQL Editor 建 `contributions` 表
+### Step 2 — Create the `contributions` table in the Supabase SQL Editor
 
-**操作位置**：Supabase 控制台（非代码文件），字段对齐 ARCHITECTURE.md §5：
+**Where to do this**: Supabase console (not a code file); fields aligned with ARCHITECTURE.md §5:
 
-| 字段 | 类型 | 约束 |
+| Field | Type | Constraint |
 |---|---|---|
 | `id` | UUID | PK, `gen_random_uuid()` |
-| `user_id` | UUID | FK → users，nullable |
+| `user_id` | UUID | FK → users, nullable |
 | `course` | VARCHAR(50) | NOT NULL |
 | `danger_zone` | TEXT | |
 | `setup_tips` | TEXT | |
@@ -59,17 +59,17 @@ pytest-asyncio
 | `is_approved` | BOOLEAN | DEFAULT FALSE |
 | `created_at` | TIMESTAMPTZ | DEFAULT NOW() |
 
-**验收命令**：与 PHASE2.md Step 1 相同的 `pg_tables` 查询，预期新增 `contributions`。
+**Acceptance command**: the same `pg_tables` query as PHASE2.md Step 1; expect `contributions` to now appear.
 
 ---
 
-## 里程碑 C：模型 + Schema 层
+## Milestone C: Model + Schema Layer
 
-### Step 3 — 新建 `backend/app/models/contribution.py`
+### Step 3 — Create `backend/app/models/contribution.py`
 
-字段与约束严格对齐上表；`user_id`、`course` 用与 `Guide`/`Rating` 模型一致的 `Mapped[...]` 写法。
+Fields and constraints strictly aligned with the table above; `user_id` and `course` use the same `Mapped[...]` style as the `Guide`/`Rating` models.
 
-### Step 4 — 新建 `backend/app/schemas/contribution.py`
+### Step 4 — Create `backend/app/schemas/contribution.py`
 
 ```python
 class ContributionRequest(BaseModel):
@@ -85,7 +85,7 @@ class ContributionResponse(BaseModel):
     created_at: datetime
 ```
 
-### Step 5 — 更新 `backend/app/schemas/guide.py`（仅追加，不改动现有 `GuideRequest`/`GuideResponse`）
+### Step 5 — Update `backend/app/schemas/guide.py` (append only, do not modify the existing `GuideRequest`/`GuideResponse`)
 
 ```python
 class GuideHistoryItem(BaseModel):
@@ -101,9 +101,9 @@ class GuideHistoryResponse(BaseModel):
 
 ---
 
-## 里程碑 D：依赖层 — 管理员权限
+## Milestone D: Dependency Layer — Admin Permissions
 
-### Step 6 — 更新 `backend/app/api/deps.py`（追加，不改动现有 `get_db`/`get_current_user`/`get_optional_user`）
+### Step 6 — Update `backend/app/api/deps.py` (append only, do not modify the existing `get_db`/`get_current_user`/`get_optional_user`)
 
 ```python
 async def require_admin(user: User = Depends(get_current_user)) -> User:
@@ -112,13 +112,13 @@ async def require_admin(user: User = Depends(get_current_user)) -> User:
     return user
 ```
 
-复用 `get_current_user`（未登录/token 无效已由它抛 401），这里只补 403 的角色校验。
+Reuses `get_current_user` (it already raises 401 for not-logged-in/invalid tokens) — this only adds the 403 role check on top.
 
 ---
 
-## 里程碑 E：Guide 历史与详情路由
+## Milestone E: Guide History and Detail Routes
 
-### Step 7 — 更新 `backend/app/api/v1/routes/guide.py`（追加端点，`generate` 逻辑不动）
+### Step 7 — Update `backend/app/api/v1/routes/guide.py` (append an endpoint, `generate`'s logic untouched)
 
 ```python
 @router.get("/history", response_model=GuideHistoryResponse)
@@ -129,10 +129,10 @@ async def guide_history(
     user: User = Depends(get_current_user),
 ):
     # WHERE guide.user_id == user.id, ORDER BY created_at DESC, LIMIT/OFFSET
-    # 同时执行一次 COUNT 得到 total
+    # also run a COUNT query at the same time to get total
 ```
 
-### Step 8 — 更新 `backend/app/api/v1/routes/guide.py`（追加）
+### Step 8 — Update `backend/app/api/v1/routes/guide.py` (append)
 
 ```python
 @router.get("/{guide_id}", response_model=GuideResponse)
@@ -140,15 +140,15 @@ async def get_guide(
     guide_id: UUID,
     db: AsyncSession = Depends(get_db),
 ):
-    # db.get(Guide, guide_id)，不存在 → 404
-    # 不做归属校验：guide_id 是 UUID，本身即不可猜测，语义等同分享链接
+    # db.get(Guide, guide_id); if it doesn't exist → 404
+    # no ownership check: guide_id is a UUID, inherently unguessable, semantically equivalent to a share link
 ```
 
 ---
 
-## 里程碑 F：Contributions 提交与审核路由
+## Milestone F: Contribution Submission and Review Routes
 
-### Step 9 — 更新 `backend/app/services/rag_service.py`（追加，`retrieve_tips_async` 不动）
+### Step 9 — Update `backend/app/services/rag_service.py` (append, `retrieve_tips_async` untouched)
 
 ```python
 def _add_tip_sync(tip_id: str, course: str, text: str) -> None:
@@ -159,9 +159,9 @@ async def add_tip_async(tip_id: str, course: str, text: str) -> None:
     await asyncio.to_thread(_add_tip_sync, tip_id, course, text)
 ```
 
-复用已有的 `_get_collection()`，写入同一个 `aaf_data` collection，`metadatas={"course": ...}` 与 `retrieve_tips_async` 的 `where={"course": course}` 查询字段对齐，保证审核通过的内容能被检索到。
+Reuses the existing `_get_collection()`, writing into the same `aaf_data` collection; `metadatas={"course": ...}` is aligned with the `where={"course": course}` query field used by `retrieve_tips_async`, ensuring approved content can actually be retrieved.
 
-### Step 10 — 新建 `backend/app/api/v1/routes/contributions.py`
+### Step 10 — Create `backend/app/api/v1/routes/contributions.py`
 
 ```python
 @router.post("", response_model=ContributionResponse, status_code=201)
@@ -170,10 +170,10 @@ async def submit_contribution(
     db: AsyncSession = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
-    # INSERT contributions，user_id=user.id if user else None，is_approved=False
+    # INSERT contributions, user_id=user.id if user else None, is_approved=False
 ```
 
-### Step 11 — 更新 `backend/app/api/v1/routes/contributions.py`（追加，均 `Depends(require_admin)`）
+### Step 11 — Update `backend/app/api/v1/routes/contributions.py` (append, all with `Depends(require_admin)`)
 
 ```python
 @router.get("", response_model=list[ContributionResponse])
@@ -189,11 +189,11 @@ async def approve_contribution(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    # 1. 查 contribution，不存在 → 404
+    # 1. look up the contribution; if it doesn't exist → 404
     # 2. is_approved = True
-    # 3. 拼装文本（course + danger_zone + setup_tips + career_value）
+    # 3. assemble the text (course + danger_zone + setup_tips + career_value)
     # 4. await rag_service.add_tip_async(str(contribution.id), contribution.course, text)
-    # 5. 返回更新后的 ContributionResponse
+    # 5. return the updated ContributionResponse
 
 @router.delete("/{contribution_id}", status_code=204)
 async def reject_contribution(
@@ -201,10 +201,10 @@ async def reject_contribution(
     db: AsyncSession = Depends(get_db),
     _admin: User = Depends(require_admin),
 ):
-    # 直接 DELETE（表里没有"已驳回"状态，驳回即删除，不进 ChromaDB）
+    # DELETE directly (the table has no "rejected" state — rejecting just deletes it, never enters ChromaDB)
 ```
 
-### Step 12 — 更新 `backend/app/api/v1/router.py`
+### Step 12 — Update `backend/app/api/v1/router.py`
 
 ```python
 from app.api.v1.routes import contributions
@@ -214,9 +214,9 @@ api_router.include_router(contributions.router, prefix="/contributions", tags=["
 
 ---
 
-## 里程碑 G：限流层
+## Milestone G: Rate Limiting Layer
 
-### Step 13 — 新建 `backend/app/core/rate_limit.py`
+### Step 13 — Create `backend/app/core/rate_limit.py`
 
 ```python
 import asyncio
@@ -245,9 +245,9 @@ class SlidingWindowLimiter:
 guide_generate_limiter = SlidingWindowLimiter(max_requests=5, window_seconds=60)
 ```
 
-`max_requests=5, window_seconds=60` 是初始默认值，可在验收时按 PM 需要调整。单实例 + `asyncio.Lock` 与 CLAUDE.md「不引入 Redis」的铁律一致；Render 多实例部署时这个内存限流会失效（每个实例各算各的），当前单实例部署下暂不是问题。
+`max_requests=5, window_seconds=60` is the initial default and can be adjusted during acceptance testing per PM's needs. Single-instance + `asyncio.Lock` is consistent with CLAUDE.md's iron rule of "no Redis"; under a multi-instance Render deployment this in-memory rate limit would fail (each instance counts independently) — not currently a problem under the single-instance deployment.
 
-### Step 14 — 更新 `backend/app/api/v1/routes/guide.py`（仅 `generate` 端点追加一个依赖）
+### Step 14 — Update `backend/app/api/v1/routes/guide.py` (add a single dependency to the `generate` endpoint only)
 
 ```python
 async def check_rate_limit(request: Request) -> None:
@@ -267,88 +267,88 @@ async def generate_guide_endpoint(
 
 ---
 
-## 里程碑 H：单元 / 集成测试
+## Milestone H: Unit / Integration Tests
 
-### Step 15 — 新建 `backend/tests/unit/test_security.py`
+### Step 15 — Create `backend/tests/unit/test_security.py`
 
-覆盖：`hash_password`/`verify_password` 往返；`create_access_token` 生成的 token 能被 `decode_token` 正确解出 `sub`；过期 token（`expires_delta=timedelta(seconds=-1)`）→ `decode_token` 抛 401；篡改签名的 token → 401。
+Covers: `hash_password`/`verify_password` round-trip; a token generated by `create_access_token` can be correctly decoded by `decode_token` to recover `sub`; an expired token (`expires_delta=timedelta(seconds=-1)`) → `decode_token` raises 401; a token with a tampered signature → 401.
 
-### Step 16 — 新建 `backend/tests/unit/test_ai_service.py`
+### Step 16 — Create `backend/tests/unit/test_ai_service.py`
 
-`unittest.mock.patch` 掉 `ai_service._client.messages.create`，验证：`build_user_context` 各字段拼装正确；`generate_guide` 返回值正确剥离 `<thinking>...</thinking>`；`tokens_used` 等于 mock 返回的 `input_tokens + output_tokens`。不发真实 Anthropic 请求。
+Uses `unittest.mock.patch` to patch out `ai_service._client.messages.create`; verifies: `build_user_context` assembles each field correctly; `generate_guide`'s return value correctly strips `<thinking>...</thinking>`; `tokens_used` equals the mock-returned `input_tokens + output_tokens`. No real Anthropic requests are sent.
 
-### Step 17 — 新建 `backend/tests/integration/test_guide_route.py`
+### Step 17 — Create `backend/tests/integration/test_guide_route.py`
 
-`ASGITransport` + `app.router.lifespan_context`（沿用 Phase 2 验收时用过的模式）。`monkeypatch` 掉 `rag_service.retrieve_tips_async` / `search_service.tavily_search` / `ai_service.generate_guide`，避免真实付费调用。覆盖：匿名生成 → `guide.user_id is None`；登录生成 → `guide.user_id` 与当前用户一致；`asyncio.gather` 单个子任务抛异常时主流程仍能降级完成（`return_exceptions=True` 那段逻辑）；连续超过限流阈值的请求收到 429。
-
----
-
-## 里程碑 I（可选，按需）：`/auth/logout` 黑名单
-
-PHASE2.md 已把这个标为"若需要"。除非产品上确实需要"用户点登出后旧 token 立刻失效"，否则维持现状（客户端删 token 即可，无状态设计更简单）。如果要做：
-
-### Step 18（可选）— `revoked_tokens` 表 + `decode_token` 增加黑名单校验
-
-需要额外一次 DB 查询在每次鉴权请求里执行，有性能代价，建议先跳过，等前端/产品明确提出这个需求再单独立项，不算进本阶段强制验收范围。
+`ASGITransport` + `app.router.lifespan_context` (reusing the pattern already used during Phase 2 acceptance testing). `monkeypatch`es out `rag_service.retrieve_tips_async` / `search_service.tavily_search` / `ai_service.generate_guide`, avoiding real paid calls. Covers: anonymous generation → `guide.user_id is None`; logged-in generation → `guide.user_id` matches the current user; when a single sub-task inside `asyncio.gather` raises, the main flow can still degrade gracefully and complete (the `return_exceptions=True` logic); requests exceeding the rate-limit threshold in a row receive 429.
 
 ---
 
-## 阶段验收测试
+## Milestone I (Optional, As Needed): `/auth/logout` Blacklist
+
+PHASE2.md already flagged this as "if needed." Unless the product genuinely requires "old tokens become invalid immediately after the user clicks logout," keep the status quo (client simply deletes the token — the stateless design is simpler). If it is to be done:
+
+### Step 18 (Optional) — `revoked_tokens` table + blacklist check added to `decode_token`
+
+This requires one extra DB query on every authenticated request, at a performance cost — recommended to skip for now, and only spin up as its own item once the frontend/product explicitly asks for it; not counted as part of this phase's mandatory acceptance scope.
+
+---
+
+## Phase Acceptance Tests
 
 ```bash
-# 前置：TOKEN = 已登录用户的 access_token（沿用 Phase2 的登录方式获取）
-# ADMIN_TOKEN = role=admin 用户的 access_token（需先手动在 Supabase 把某个测试用户 role 改成 admin）
+# Prerequisite: TOKEN = the access_token of a logged-in user (obtained via the Phase 2 login flow)
+# ADMIN_TOKEN = the access_token of a user with role=admin (first manually change a test user's role to admin in Supabase)
 
-# 1. 提交学长经验（匿名）
+# 1. Submit senior experience (anonymous)
 curl -X POST http://localhost:8000/api/v1/contributions \
   -H "Content-Type: application/json" \
   -d '{"course":"ICS 32","danger_zone":"Project 3 due same week as midterm","setup_tips":"Set up pylint before week 1"}'
-# 预期: 201, is_approved:false
+# Expected: 201, is_approved:false
 
-# 2. 管理员查看待审核列表
+# 2. Admin views the pending-review list
 curl http://localhost:8000/api/v1/contributions \
   -H "Authorization: Bearer $ADMIN_TOKEN"
-# 预期: 200, 包含步骤1提交的记录
+# Expected: 200, includes the record submitted in step 1
 
-# 3. 管理员批准（触发 ChromaDB 写入）
+# 3. Admin approves (triggers the ChromaDB write)
 curl -X POST http://localhost:8000/api/v1/contributions/<id>/approve \
   -H "Authorization: Bearer $ADMIN_TOKEN"
-# 预期: 200, is_approved:true
+# Expected: 200, is_approved:true
 
-# 4. 非管理员调用审核端点 → 403
+# 4. Non-admin calls the review endpoint → 403
 curl http://localhost:8000/api/v1/contributions \
   -H "Authorization: Bearer $TOKEN"
-# 预期: 403
+# Expected: 403
 
-# 5. 查看 Guide 历史（需登录）
+# 5. View Guide history (requires login)
 curl http://localhost:8000/api/v1/guide/history \
   -H "Authorization: Bearer $TOKEN"
-# 预期: 200, {"items":[...],"total":N}
+# Expected: 200, {"items":[...],"total":N}
 
-# 6. 查看单条 Guide 详情（匿名可访问）
+# 6. View a single Guide's detail (anonymous access)
 curl http://localhost:8000/api/v1/guide/<guide_id>
-# 预期: 200
+# Expected: 200
 
-# 7. 限流验证：连续调用 6 次 /guide/generate（超过默认阈值 5次/60s）
+# 7. Rate-limit verification: call /guide/generate 6 times in a row (exceeding the default threshold of 5 requests/60s)
 for i in {1..6}; do
   curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8000/api/v1/guide/generate \
     -H "Content-Type: application/json" \
     -d '{"role":"student","courses":["ICS 32"],"confidence":6.0,"goals":["ace_grade"]}'
 done
-# 预期: 前5次 200，第6次 429
+# Expected: 200 for the first 5, 429 on the 6th
 ```
 
 ---
 
-## 与 Phase 4 的边界
+## Boundary with Phase 4
 
-| 功能 | Phase 3 状态 | Phase 4 完成 |
+| Feature | Phase 3 State | Phase 4 Completion |
 |---|---|---|
-| 后端 API 契约 | 本阶段结束后冻结（含新增的 history/detail/contributions 审核端点） | 前端严格对齐消费，不再新增/变更后端端点 |
-| 前端工程 | 未开始 | React 18 + Vite + TS 独立工程，100% 视觉还原 `templates/index.html` |
-| 认证态前端联调 | 无 | `useAuth.ts` 接入 `/auth/*`，Token 存储与刷新逻辑 |
-| Markdown 渲染 | 无 | `react-markdown` 替代 `marked.js` |
+| Backend API contract | Frozen at the end of this phase (including the newly added history/detail/contributions-review endpoints) | Frontend strictly aligns and consumes as-is; no further new/changed backend endpoints |
+| Frontend project | Not started | Standalone React 18 + Vite + TS project, 100% visual fidelity to `templates/index.html` |
+| Auth-state frontend integration | None | `useAuth.ts` wired to `/auth/*`, token storage and refresh logic |
+| Markdown rendering | None | `react-markdown` replaces `marked.js` |
 
 ---
 
-*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约。契约扩展部分需 PM 在 Step 2 前单独确认。每步执行前必须等待 PM 确认。*
+*This file was generated by the architect. Code implementation must strictly follow the directory structure and interface contracts in ARCHITECTURE.md. The contract-extension section requires separate PM confirmation before Step 2. Each step must wait for PM confirmation before execution.*

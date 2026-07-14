@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <i>An AI agent + community platform that turns "I have no idea how to approach this class"<br/>
+  <i>An AI agent + community platform that turns "I have no idea how to approach and leverage this class"<br/>
   into a week-by-week plan — architected, built, debugged, and shipped solo, and running in production today.</i>
 </p>
 

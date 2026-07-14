@@ -65,48 +65,99 @@
 
 ## Step 2 — Docs Export：后端生成 + Object Storage + Presigned URL
 
-**状态：方案已确定，文件级细节待 Step 1 验证通过后展开**
+**状态：已实现**
+
+### 相比原始方案的设计简化（诚实披露）
+
+原计划是"前端 POST 任务数据"，但 Step 1 已经实现了 `calendar_service.parse_markdown_tasks()`，可以从 `guide.response_md` 解析出结构化任务 —— Step 2 直接复用这个函数，因此端点不需要请求体，只需要 `guide_id`（路径参数）。后端本来就存着这份数据，没有理由让前端重新爬一遍表格再传回来，也让日历订阅源与 Docs 导出共用同一套解析规则，避免两处实现各自维护、逐渐漂移。
 
 ### 数据流
 
 ```
-前端 POST 任务数据
-    → FastAPI 端点在内存中生成 .docx（io.BytesIO，不落盘）
-    → 字节流直接上传至 Supabase Storage bucket
-    → 生成短时效 Presigned URL
-    → 返回给前端，前端自动打开/下载该 URL
+POST /guide/{guide_id}/export/docx（无需请求体）
+    → 从 DB 取 guide.response_md，parse_markdown_tasks() 解析任务
+    → python-docx 在内存中生成 .docx（io.BytesIO，不落盘）
+    → supabase-py 异步客户端（acreate_client）上传字节流至 Supabase Storage bucket（upsert，路径 = {guide_id}.docx）
+    → create_signed_url() 生成 10 分钟时效的 Presigned URL
+    → 返回 { download_url, expires_in } 给前端
 ```
 
-### 待确认的技术细节（实现前需逐一核实，而非现在假设）
+### 关键设计细节
 
-- 服务端 `.docx` 生成库：`python-docx`。
-- Supabase Storage 访问方式：`supabase-py` 的 storage client，或直接调用 Storage REST API；需要 `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`（`.env.example` 中已有这两个占位符，此前一直未被任何代码使用 —— Step 2 会让它们真正生效）。
-- Presigned URL 时效：初步建议 5–10 分钟（仅够前端立即打开/下载），具体值待实现时确认。
-- Bucket 权限模型：私有 bucket + presigned URL，而非公开 bucket，避免文档 URL 被枚举访问。
+- **异步 Supabase 客户端，而非同步 + `asyncio.to_thread`**：确认 `supabase-py` 提供真正的 `acreate_client` / `AsyncClient`（`.storage.from_(bucket).upload()` / `.create_signed_url()` 均为原生协程），比包装同步客户端更贴合 CLAUDE.md"全程 async/await"的铁律 —— 与 `rag_service.py` 对 ChromaDB 的 `asyncio.to_thread` 包装不同（ChromaDB 没有可用的异步客户端，Supabase 有，所以这里选择原生异步而非照搬同一种包装模式）。
+- **`SUPABASE_URL` ≠ `DATABASE_URL`**：两者共享同一个 project ref，但分别是 HTTPS REST/Storage API 地址（`https://<ref>.supabase.co`）与 Postgres 直连字符串（`postgresql+asyncpg://...@db.<ref>.supabase.co:5432/postgres`），不可互换 —— 已从 `DATABASE_URL` 的 host 中推导出正确的 `SUPABASE_URL` 值。
+- **对象路径固定为 `{guide_id}.docx` + `upsert=true`**：同一份 guide 重复导出会覆盖旧文件，而非无限堆积存储用量。
+- **鉴权与 `GET /guide/{id}` 保持一致（Optional）**：现有 guide 详情接口本来就没有归属校验（匿名可生成 guide），导出接口沿用同样的开放模型，而非另立一套更严格的规则。
+- **范围收窄为 `.docx`，不做 PDF**：原计划写"`.docx`（或 PDF）"，但服务端生成 PDF 需要额外的重量级依赖（如 LibreOffice headless 转换或 `weasyprint`），本次先只做 `.docx`，PDF 留作独立的未来扩展。
+
+### 文件清单
+
+| 文件 | 操作 | 说明 |
+|---|---|---|
+| `backend/requirements.txt` | 编辑 | 新增 `python-docx`、`supabase` |
+| `backend/app/core/config.py` | 编辑 | 新增 `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_STORAGE_BUCKET` |
+| `backend/.env.example` | 编辑 | 新增对应占位符 |
+| `backend/app/schemas/export.py` | 新建 | `DocxExportResponse` |
+| `backend/app/services/docs_export_service.py` | 新建 | `build_docx()`（python-docx + io.BytesIO）+ `upload_and_sign()`（异步 Supabase Storage 上传 + Presigned URL） |
+| `backend/app/api/v1/routes/guide.py` | 编辑 | 新增 `POST /guide/{guide_id}/export/docx` |
+| `ARCHITECTURE.md` | 编辑 | 同步目录树、端点契约表 |
+| Supabase 控制台（非仓库文件） | 手动执行 | 创建私有 Storage bucket `study-plan-exports`（见下方 SQL） |
+
+手动创建 bucket（Supabase SQL 控制台）：
+
+```sql
+insert into storage.buckets (id, name, public)
+values ('study-plan-exports', 'study-plan-exports', false);
+```
+
+### Step 2 前端接线（未在本次范围内）
+
+`ExportMenu.tsx` 的 `handleExportDocs()` / `buildDocsExport()`（假的 `.html` 下载）需要替换为：调用 `POST /guide/{guide_id}/export/docx`，拿到 `download_url` 后 `window.open(download_url, '_blank')`；按钮文案从"Export for Google Docs"改为诚实的"Download as Word (.docx)"。
 
 ---
 
 ## Step 3 — Email：BackgroundTasks + Jinja2 + Resend
 
-**状态：方案已确定，文件级细节待 Step 2 验证通过后展开**
+**状态：实施中**
+
+### 相比原始方案的改进（诚实披露）
+
+原计划是"`asyncio.to_thread` 包装 Resend 同步 SDK 调用"。实际拆包 `resend` 2.32.2 源码后发现：只要安装 `resend[async]`（唯一新增依赖是 `httpx>=0.24.0`，而 `httpx` 本项目已经在用），`resend.Emails.send_async()` 就是一个真正原生的、由 `httpx` 驱动的协程（`resend/async_request.py` 用 `AsyncRequest` 实现，非包装同步调用）。这与 Step 2 选择 Supabase 原生异步客户端而非 `asyncio.to_thread` 包装是同一个判断标准：SDK 有原生异步就用原生异步，没有才包装线程池（`rag_service.py` 包装 ChromaDB 是因为 ChromaDB 确实没有异步客户端）。因此改为使用 `send_async()`，不再需要 `asyncio.to_thread`。
+
+**一个需要注意的细节**：`resend` 包自己的全局 `api_key` 是在模块导入时读取 `os.environ.get("RESEND_API_KEY")`，而不是走本项目的 `Settings`（pydantic-settings，读取 `.env` 文件）。两者通常一致，但如果 `RESEND_API_KEY` 只写在 `.env` 里、从未被 export 到真实 shell 环境变量，`resend.api_key` 在导入时会读到 `None`，与 `settings.RESEND_API_KEY` 不一致却不会报错，直到真正发信时才失败。解决方式：在 `send_welcome_email()` 内显式执行 `resend.api_key = settings.RESEND_API_KEY`，以本项目的 `Settings` 单一数据源为准，不依赖 `resend` 自己的环境变量探测。
 
 ### 数据流
 
 ```
 POST /auth/register 成功写入 user
-    → BackgroundTasks 注册 send_welcome_email() 任务
+    → background_tasks.add_task(send_welcome_email, user.email, user.display_name)
     → HTTP 响应立即返回（慢/挂掉的第三方 API 不阻塞注册流程）
-    → 后台任务：Jinja2 渲染 welcome_email.html（注入 display_name 等动态数据）
-    → asyncio.to_thread 包装 Resend 同步 SDK 调用（不阻塞事件循环）
+    → 后台任务：Jinja2 渲染 welcome_email.html（autoescape 开启，注入 display_name 等动态数据）
+    → resend.Emails.send_async()（httpx 原生协程，非线程池包装）
     → 发送失败仅 logging.error 记录，不抛出（不影响已完成的注册流程）
 ```
 
-### 已确定的范围
+### 关键设计细节
 
-- 仅"欢迎邮件"，不做邮箱验证链接流程（`users.is_verified` 列继续保持未使用状态）。
-- 发信方使用 Resend 沙箱地址 `onboarding@resend.dev`，无需 DNS 配置即可立即上线；后续可换绑自定义域名。
-- 新增文件预期：`backend/app/services/email_service.py`、`backend/app/templates/welcome_email.html`、`backend/requirements.txt` 追加 `resend` + `jinja2`。
-- 新增配置：`RESEND_API_KEY`、`EMAIL_FROM_ADDRESS`（写入 `Settings` 与 `.env.example` 占位符，真实 key 由用户自行写入未提交的 `.env`）。
+- **Jinja2 `autoescape` 必须开启**：`display_name` 是用户注册时自由填写的文本，会被插值进 HTML 邮件正文。开启 `select_autoescape(["html"])` 后 Jinja2 自动转义 `<`/`>`/`&` 等字符，防止恶意 `display_name`（如 `<script>...`）在收件方邮箱客户端渲染时形成 XSS。
+- **模板目录用 `Path(__file__).resolve().parent.parent / "templates"`，不用相对字符串路径**：避免生产环境（Render）工作目录与本地不一致导致找不到模板文件。
+- **邮件内 "返回 AAF" 链接复用 `settings.ALLOWED_ORIGINS[0]`**：前端地址已经作为 CORS 白名单存在于 `Settings` 中，没有必要为同一个 URL 再新增一个专门的配置项。
+- **仅"欢迎邮件"，不做邮箱验证链接流程**（`users.is_verified` 列继续保持未使用状态）。
+- **发信方使用 Resend 沙箱地址 `onboarding@resend.dev`**，无需 DNS 配置即可立即上线；后续可换绑自定义域名。
+
+### 文件清单
+
+| 文件 | 操作 | 说明 |
+|---|---|---|
+| `backend/requirements.txt` | 编辑 | 新增 `resend[async]`、`jinja2` |
+| `backend/app/core/config.py` | 编辑 | 新增 `RESEND_API_KEY` / `EMAIL_FROM_ADDRESS` |
+| `backend/.env.example` | 编辑 | 新增对应占位符 |
+| `backend/app/templates/welcome_email.html` | 新建 | Jinja2 HTML 邮件模板 |
+| `backend/app/services/email_service.py` | 新建 | Jinja2 环境初始化 + `send_welcome_email()`（resend `send_async`，失败仅记录日志） |
+| `backend/app/api/v1/routes/auth.py` | 编辑 | `register()` 新增 `background_tasks: BackgroundTasks` 参数，写入成功后派发欢迎邮件任务 |
+| `ARCHITECTURE.md` | 编辑 | 同步目录树、`/auth/register` 端点描述 |
+
+Supabase / 第三方控制台无需任何手动步骤（不涉及新表或新存储桶）；用户只需自行申请 Resend API Key 并写入未提交的 `backend/.env`。
 
 ---
 

@@ -1,72 +1,72 @@
-# Phase 5 执行手册：render.yaml + vercel.json，生产部署上线
+# Phase 5 Execution Manual: render.yaml + vercel.json, Production Deployment Launch
 
-> **状态**：**已完成**——里程碑 A~E 全部执行完毕，`backend/` 已部署至 Render、`frontend/` 已部署至 Vercel，PM 已确认线上部署整体完成。Render/Vercel 控制台内的具体操作（创建服务、填写密钥、回填域名）均由 PM 本人持账号权限完成，AI 未接触任何真实密钥或控制台。
-> **前置条件**：Phase 4 已完成并 `git commit`（三步向导、认证 UI、Guide 历史、学长贡献表单、管理员审核后台，本地 `npm run dev` + `uvicorn --reload` 全部手动走查通过）。开工前需先处理当前工作区里 `ContributePage.tsx` / `LoginPage.tsx` / `RegisterPage.tsx` 的未提交改动与新增的 `frontend/public/images.png`——本地测试后先提交，不把 Phase4 尾巴带进 Phase5。
-> **验收目标**：`backend/` 部署至 Render 并可通过公网域名访问；`frontend/` 部署至 Vercel 并可通过公网域名访问；生产 CORS 精确放行 Vercel 域名（不使用通配符）；ChromaDB 生产数据可复现，且**扛得住一次真实 redeploy**；生产域名下完整冒烟测试（向导 + 登录 + 历史 + 贡献审核闭环）全部通过
-> **协作约束**：每步执行前等待确认，执行后等待本地测试通过并 `git commit`，再进行下一步。**本阶段额外约束**：凡涉及 Render/Vercel 控制台的操作（创建服务、填写密钥类环境变量、复制 Supabase 连接串）必须由 PM 持账号权限亲自执行——AI 没有这些控制台的访问权限，只负责给出精确的配置内容与核对清单，不代为操作。
+> **Status**: **Completed** — Milestones A through E have all been executed; `backend/` has been deployed to Render, `frontend/` has been deployed to Vercel, and the PM has confirmed the overall production deployment is complete. All hands-on operations within the Render/Vercel consoles (creating services, filling in secrets, backfilling domains) were performed personally by the PM using their own account credentials — the AI never touched any real secrets or consoles.
+> **Prerequisite**: Phase 4 completed and `git commit`ed (the three-step wizard, auth UI, Guide history, senior-contribution form, and admin review backend all manually walked through locally via `npm run dev` + `uvicorn --reload`). Before starting, the uncommitted changes in the current workspace to `ContributePage.tsx` / `LoginPage.tsx` / `RegisterPage.tsx` and the newly added `frontend/public/images.png` needed to be handled first — committed after local testing, so Phase 4's loose ends wouldn't carry over into Phase 5.
+> **Acceptance goal**: `backend/` deployed to Render and reachable via a public domain; `frontend/` deployed to Vercel and reachable via a public domain; production CORS precisely allowlists the Vercel domain (no wildcard); production ChromaDB data is reproducible and **survives a real redeploy**; the full smoke test under the production domain (wizard + login + history + contribution-review loop) all pass
+> **Collaboration constraint**: Wait for confirmation before each step; after execution, wait for local tests to pass and a `git commit` before moving to the next step. **Additional constraint for this phase**: any operation touching the Render/Vercel consoles (creating services, filling in secret-type environment variables, copying the Supabase connection string) must be performed personally by the PM using their own account credentials — the AI has no access to these consoles, and is only responsible for providing the precise configuration content and a verification checklist, not for performing the action on the PM's behalf.
 
 ---
 
-## ⚠️ 需要 PM 确认的部署决策（执行前必读）
+## ⚠️ Deployment Decisions Requiring PM Confirmation (Must Read Before Executing)
 
-### 1. ChromaDB 生产持久化策略 — 已拍板：方案 C（Supabase 动态重灌）
+### 1. ChromaDB production persistence strategy — Decided: Plan C (dynamic Supabase reseeding)
 
-开工前审计代码/基础设施假设时发现的问题：
-- ARCHITECTURE.md §2 目录树里规划的 `backend/scripts/load_rag_data.py`（CSV → ChromaDB 一次性导入脚本）在 Phase1-4 都没有被实际创建。
-- `backend/chroma_db/`（本机持久化目录，`.gitignore` 排除）里实际只有 **22 条**真实学长经验（ARCHITECTURE.md 里"43 条"是过时数字），另外 2 条 `course: "ICS 46"` 的记录（其中一条正文带 `REVIEWTAG` 调试标记）经核对是本地测试 Milestone L 审核后台"批准"按钮时通过真实接口写入的残留数据，已从 Supabase 和本地 ChromaDB 一并清除，不计入真实数据。
-- Render 的默认文件系统是**临时的（ephemeral）**——每次 redeploy 都会清空容器内的本地磁盘，这一点判断没变。
+Issues discovered while auditing the code/infrastructure assumptions before starting work:
+- `backend/scripts/load_rag_data.py` (the CSV → ChromaDB one-time import script), planned in ARCHITECTURE.md §2's directory tree, was never actually created across Phases 1-4.
+- `backend/chroma_db/` (the local persistence directory, excluded via `.gitignore`) actually only contains **22** real pieces of senior-student feedback (the "43 entries" figure in ARCHITECTURE.md is stale) — an additional 2 records with `course: "ICS 46"` (one of which had a `REVIEWTAG` debug marker in its body) were, upon inspection, leftover data written through the real endpoint while locally testing Milestone L's admin-review-backend "approve" button; these have already been cleared from both Supabase and the local ChromaDB, and are not counted as real data.
+- Render's default filesystem is **ephemeral** — every redeploy wipes the container's local disk. This assessment hasn't changed.
 
-最初设想的是"方案 A（Persistent Disk）/ 方案 B（每次冷启动从 CSV 重建）"二选一，但执行 Milestone A 时发现一个更好的路径：Milestone L 的管理员审核后台早已把 approve 的贡献写进 Supabase 的 `contributions` 表（`is_approved` 字段），Supabase 本身就是持久化数据源——不需要额外买 Persistent Disk，只要把 CSV 原始种子数据也一并迁移进 Supabase，让 Supabase 成为唯一数据源头，每次容器冷启动时把 `is_approved = true` 的记录重新灌回内存态 ChromaDB 即可。这就是**方案 C**，已完全取代方案 A/B 起草稿，且已经实现并本地验证：
+The original plan was a choice between "Plan A (Persistent Disk) / Plan B (rebuild from CSV on every cold start)," but while executing Milestone A a better path was found: Milestone L's admin review backend already writes approved contributions into Supabase's `contributions` table (the `is_approved` field) — Supabase itself is already a persistent data source. There's no need to pay for an extra Persistent Disk; it's enough to also migrate the CSV's original seed data into Supabase, making Supabase the single source of truth, and reload the `is_approved = true` records back into the in-memory ChromaDB on every container cold start. That's **Plan C**, which has fully replaced the Plan A/B draft, and has already been implemented and verified locally:
 
-| 步骤 | 文件 | 说明 |
+| Step | File | Description |
 |---|---|---|
-| 一次性迁移 | `backend/scripts/migrate_csv_to_supabase.py` | 把 CSV 里 23 条原始经验（22 条课程列非空 + 1 条手动补全课程代码的记录）迁移进 Supabase `contributions` 表，`is_approved=True`。用确定性 UUID（按 CSV 行号派生）保证可安全重跑、不重复插入。已本地执行一次。 |
-| 重灌逻辑 | `backend/scripts/load_rag_data.py` | 不再读 CSV，改为查询 Supabase `WHERE is_approved = true`，清空并重建 ChromaDB collection（`rag_service.reset_collection_async()`），用 `rag_service.build_tip_text()`（与 `approve_contribution` 共享同一份拼接逻辑，避免两条路径产出的 tip 格式 drift）逐条写入。 |
-| 接入生命周期 | `backend/app/main.py` | `lifespan` 在 DB 健康检查之后调用 `reseed_from_supabase()`——每次冷启动（含免费档休眠重启、每次 redeploy）都会重建，不依赖任何本地磁盘状态；`tests/integration/test_guide_route.py` 相应加了 mock，避免测试真的打 Supabase。 |
-| `render.yaml` | `backend/render.yaml` | 不再有 `disk` 块，免费层 Web Service 即可部署（详见里程碑 B Step 4）。 |
+| One-time migration | `backend/scripts/migrate_csv_to_supabase.py` | Migrates the 23 original entries in the CSV (22 rows with a non-empty course column + 1 record with a manually completed course code) into Supabase's `contributions` table, with `is_approved=True`. Uses deterministic UUIDs (derived from the CSV row number) to ensure it can be safely rerun without duplicate inserts. Already run once locally. |
+| Reload logic | `backend/scripts/load_rag_data.py` | No longer reads the CSV — instead queries Supabase `WHERE is_approved = true`, clears and rebuilds the ChromaDB collection (`rag_service.reset_collection_async()`), and writes each record in using `rag_service.build_tip_text()` (shared with `approve_contribution`'s same assembly logic, avoiding format drift between the two paths' generated tips). |
+| Wired into the lifecycle | `backend/app/main.py` | `lifespan` calls `reseed_from_supabase()` right after the DB health check — this runs on every cold start (including free-tier sleep/wake cycles and every redeploy), with no dependency on any local disk state; `tests/integration/test_guide_route.py` was correspondingly given a mock, to avoid the tests hitting Supabase for real. |
+| `render.yaml` | `backend/render.yaml` | No longer has a `disk` block — the free-tier Web Service is sufficient for deployment (see Milestone B Step 4 for details). |
 
-方案 C 相比原方案 B 的关键差异：原方案 B 只从 CSV 重建，管理员 approve 的新贡献会在下一次 redeploy 时确定性丢失；方案 C 把 CSV 种子数据也迁移进了 Supabase，新旧贡献统一从同一张表重灌，不再有这个缺陷，也不需要方案 A 的付费 Persistent Disk。
+The key difference between Plan C and the original Plan B: Plan B only rebuilt from the CSV, so any new contribution an admin approved would deterministically be lost on the next redeploy; Plan C also migrates the CSV seed data into Supabase, so old and new contributions are uniformly reloaded from the same table — this defect no longer exists, and there's also no need for Plan A's paid Persistent Disk.
 
-**本地已验证的关键闭环**：手动把本地 ChromaDB collection 清空到 0 条，不手动跑任何脚本，直接 `uvicorn app.main:app` 冷启动，`/api/v1/health` 返回 200 后独立查询 collection，确认已自动恢复到 23 条——这正是"扛得住 redeploy"要验证的场景，本地已复现并通过；生产环境仍需在"阶段验收测试"第 6 项里重复验证一次（Render 的临时文件系统和本地手动清空毕竟是两回事）。
+**Key loop already verified locally**: manually cleared the local ChromaDB collection down to 0 entries, without manually running any script, did a cold start directly via `uvicorn app.main:app`, and after `/api/v1/health` returned 200, queried the collection from a separate process and confirmed it had automatically recovered to 23 entries — this is exactly the scenario "survives a redeploy" needs to verify, and it has been reproduced and passed locally; the production environment still needs to verify this once more in item 6 of "Phase Acceptance Tests" (Render's ephemeral filesystem and a manual local clear are, after all, two different things).
 
-### 2. Supabase 连接串：直连 vs 连接池
+### 2. Supabase connection string: direct connection vs. connection pooler
 
-`backend/app/db/session.py` 的 `pool_size=10, max_overflow=20` 是按"一个常驻服务器进程"设计的参数。本地开发只跑一个 `uvicorn --reload` 进程，从没暴露过问题。Render 生产环境下，如果 `DATABASE_URL` 填的是 Supabase 的直连地址（`db.<ref>.supabase.co:5432`），最多 30 条并发连接可能撞上 Supabase 中小规格实例的直连数上限，报错只会在生产、在并发请求下出现，本地永远复现不了。
+`backend/app/db/session.py`'s `pool_size=10, max_overflow=20` are parameters designed around "one long-running server process." Local development only ever runs a single `uvicorn --reload` process, so this has never surfaced a problem. In the Render production environment, if `DATABASE_URL` is set to Supabase's direct-connection address (`db.<ref>.supabase.co:5432`), up to 30 concurrent connections could hit the direct-connection limit of a small/medium Supabase instance — and the resulting errors would only show up in production, under concurrent load, never reproducible locally.
 
-Supabase 官方对这类"常驻后端服务"场景的建议是改用控制台里的 **Session Pooler 连接串**（端口通常是 `6543`，主机名带 `pooler` 字样）替代直连串。这只是一个环境变量的值的问题，不需要改代码——但需要 PM 去 Supabase 控制台 Settings → Database 页面自己复制这个值。已写入下面 Step 5 的环境变量核对清单，执行时不要图方便直接复用本地 `.env` 里的直连串。
+Supabase's own recommendation for this kind of "long-running backend service" scenario is to switch to the **Session Pooler connection string** from the console (port is usually `6543`, hostname contains `pooler`) in place of the direct-connection string. This is purely a matter of an environment variable's value — no code changes needed — but it requires the PM to copy this value themselves from the Supabase console's Settings → Database page. It has been written into the environment-variable checklist in Step 5 below; when executing, don't take the shortcut of just reusing the direct-connection string from the local `.env`.
 
-### 附：已知取舍（不阻塞，仅告知）
+### Appendix: Known trade-off (not blocking, informational only)
 
-Render 免费档 Web Service 在 15 分钟无请求后会休眠，下一次请求要额外等 30-60 秒冷启动，叠加 Claude 请求本身的 90s 超时，第一位访问者的等待体验会明显变差；免费档休眠重启还会触发一次 `reseed_from_supabase()`（多几秒冷启动时间，属于预期内代价，见里程碑 A）。这是免费档固有的取舍，不是 bug，写在这里方便 PM 决定要不要为常驻实例的付费档买单。
+Render's free-tier Web Service goes to sleep after 15 minutes without a request, and the next request has to wait an extra 30-60 seconds for a cold start — stacked on top of the Claude request's own 90s timeout, the first visitor's wait experience will be noticeably worse. The free-tier sleep/wake cycle will also trigger a `reseed_from_supabase()` (a few extra seconds of cold-start time, an expected cost — see Milestone A). This is an inherent trade-off of the free tier, not a bug; written here so the PM can decide whether it's worth paying for an always-on instance.
 
 ---
 
-## 与 Phase 4 的边界对照
+## Boundary Comparison with Phase 4
 
-| 功能 | Phase 4 状态 | Phase 5 完成 |
+| Feature | Phase 4 State | Phase 5 Completion |
 |---|---|---|
-| 前端工程 | 本地 `npm run dev` 可跑通，未部署 | Vercel 生产部署，公网域名可访问 |
-| 后端部署 | 本地 `uvicorn --reload`，未部署 | Render 生产部署，公网域名可访问 |
-| ChromaDB 数据 | 仅本机 `backend/chroma_db/`，无灌入脚本 | 生产环境可复现，扛得住 redeploy（方案 C：Supabase 动态重灌，已完成，见里程碑 A） |
-| CORS | 本地 `.env` 只含 `http://localhost:5173` | 生产 `ALLOWED_ORIGINS` 精确指向 Vercel 域名，无通配符 |
-| 数据库连接 | 本地直连 Supabase | 生产改用 Session Pooler 连接串 |
-| 环境变量 | 本地 `.env`/`.env.example` | Render/Vercel 控制台环境变量核对清单（本文件 Step 5、Step 7） |
-| 健康检查 | `/api/v1/health` 仅检查 DB | （可选加固）补充 ChromaDB 连通性，与 ARCHITECTURE.md §6 文档描述对齐 |
-| 端到端验收 | 仅本地手动走查 | 生产域名下完整冒烟测试，含"redeploy 后数据是否还在"这一之前从未测过的场景 |
+| Frontend project | Runs locally via `npm run dev`, not deployed | Vercel production deployment, reachable via public domain |
+| Backend deployment | Local `uvicorn --reload`, not deployed | Render production deployment, reachable via public domain |
+| ChromaDB data | Only on the local machine at `backend/chroma_db/`, no reload script | Reproducible in production, survives a redeploy (Plan C: dynamic Supabase reseeding, completed — see Milestone A) |
+| CORS | Local `.env` only contains `http://localhost:5173` | Production `ALLOWED_ORIGINS` precisely points to the Vercel domain, no wildcard |
+| Database connection | Local direct connection to Supabase | Production switches to the Session Pooler connection string |
+| Environment variables | Local `.env`/`.env.example` | Render/Vercel console environment-variable checklist (Step 5, Step 7 of this file) |
+| Health check | `/api/v1/health` only checks the DB | (Optional hardening) add ChromaDB connectivity, aligning with ARCHITECTURE.md §6's documented description |
+| End-to-end acceptance | Manual local walkthrough only | Full smoke test under the production domain, including the "does data survive a redeploy" scenario, never tested before |
 
 ---
 
-## 里程碑 A：ChromaDB 生产数据可复现性（已完成）
+## Milestone A: ChromaDB Production Data Reproducibility (Completed)
 
-方案 C 的落地拆成三个文件，均已实现并本地验证，细节见文首"部署决策 1"：
+Plan C's implementation is split across three files, all already implemented and verified locally — see "Deployment Decision 1" at the top of this document for details:
 
-### Step 1 — `backend/scripts/migrate_csv_to_supabase.py`（一次性迁移，已执行）
+### Step 1 — `backend/scripts/migrate_csv_to_supabase.py` (one-time migration, already executed)
 
-一次性脚本，非 Web 服务。读取 `backend/data/AAF_responses.csv`，把 23 条真实学长经验（course 列非空的 22 行 + 手动补全课程代码的 1 行）写入 Supabase `contributions` 表，`is_approved=True`。用 `uuid.uuid5(固定命名空间, f"csv-row-{行号}")` 生成确定性 id，重跑脚本会跳过已存在的行，不会重复插入。已本地执行一次，Supabase `contributions` 表现有 23 条、全部 `is_approved=True`。
+A one-time script, not a web service. Reads `backend/data/AAF_responses.csv` and writes the 23 real senior-student experiences (22 rows with a non-empty course column + 1 row with a manually completed course code) into Supabase's `contributions` table, with `is_approved=True`. Generates deterministic ids via `uuid.uuid5(fixed_namespace, f"csv-row-{row_number}")`, so rerunning the script skips rows that already exist rather than inserting duplicates. Already run once locally; Supabase's `contributions` table currently has 23 entries, all `is_approved=True`.
 
-### Step 2 — `backend/scripts/load_rag_data.py`（重灌逻辑）
+### Step 2 — `backend/scripts/load_rag_data.py` (reload logic)
 
-不读 CSV，改为 `SELECT * FROM contributions WHERE is_approved = true`，先调用 `rag_service.reset_collection_async()` 清空并重建 ChromaDB collection，再用 `rag_service.build_tip_text()` 逐条写入：
+Doesn't read the CSV — instead runs `SELECT * FROM contributions WHERE is_approved = true`, first calls `rag_service.reset_collection_async()` to clear and rebuild the ChromaDB collection, then writes each record in using `rag_service.build_tip_text()`:
 
 ```python
 def build_tip_text(course, danger_zone, setup_tips, career_value) -> str:
@@ -80,21 +80,21 @@ def build_tip_text(course, danger_zone, setup_tips, career_value) -> str:
     return "\n".join(text_parts)
 ```
 
-这个函数同时被 `contributions.py::approve_contribution` 调用，保证"批量重灌"和"管理员审核后实时写入"两条路径产出的 tip 文本格式完全一致，不会 drift。`tip_id` 直接用 `Contribution.id`（Supabase 的真实主键），不再用 `uuid4()` 生成——这样重灌和实时写入指向的是同一份 id 空间。
+This function is also called by `contributions.py::approve_contribution`, ensuring the tip text format produced by both the "batch reload" and "real-time write after admin review" paths is exactly identical, with no drift. `tip_id` uses `Contribution.id` directly (Supabase's real primary key) rather than generating one via `uuid4()` — so reload and real-time writes point into the same id space.
 
-### Step 3 — 接入 `backend/app/main.py` 的 `lifespan`
+### Step 3 — Wired into `backend/app/main.py`'s `lifespan`
 
-`lifespan` 在 DB 健康检查之后调用 `reseed_from_supabase()`，每次冷启动都会执行。副作用：`tests/integration/test_guide_route.py` 里的测试会真实触发 `lifespan_context`，因此加了一个 `autouse` fixture mock 掉 `app.main.reseed_from_supabase`，避免测试打真实网络请求（实测过不加 mock 会导致每个测试多耗时约 8 秒）。
+`lifespan` calls `reseed_from_supabase()` right after the DB health check, and this runs on every cold start. Side effect: the tests in `tests/integration/test_guide_route.py` would genuinely trigger `lifespan_context`, so an `autouse` fixture was added to mock out `app.main.reseed_from_supabase`, avoiding tests making real network requests (empirically, without the mock each test took about 8 extra seconds).
 
-**本地闭环验证**：手动清空 ChromaDB collection 到 0 条 → 不手动跑任何脚本，直接 `uvicorn app.main:app` 冷启动 → `/api/v1/health` 返回 200 → 独立进程查询 collection，确认自动恢复到 23 条。
+**Local loop verification**: manually cleared the ChromaDB collection down to 0 entries → without manually running any script, did a cold start directly via `uvicorn app.main:app` → `/api/v1/health` returned 200 → a separate process queried the collection and confirmed it had automatically recovered to 23 entries.
 
 ---
 
-## 里程碑 B：后端 Render 部署
+## Milestone B: Backend Render Deployment
 
-### Step 4 — `backend/render.yaml`（已完成）
+### Step 4 — `backend/render.yaml` (Completed)
 
-方案 C 落地后不再需要 Persistent Disk，`render.yaml` 里没有 `disk` 块，免费层 Web Service 即可部署：
+With Plan C in place, a Persistent Disk is no longer needed — `render.yaml` has no `disk` block, and the free-tier Web Service is sufficient for deployment:
 
 ```yaml
 services:
@@ -120,105 +120,108 @@ services:
         sync: false
 ```
 
-`sync: false` 表示密钥类的值只在 Render 控制台手填，不写进这个会被提交进 Git 的文件——延续 CLAUDE.md「密钥不硬编码」的约束。落地时发现并修了两个原始草案没有的坑：
-- **`rootDir: backend`**：仓库根目录没有 `requirements.txt`（只在 `backend/requirements.txt`），不加这个字段 `buildCommand` 会因为找不到文件失败。
-- **`PYTHON_VERSION: 3.11.15`**：本地 venv 实际是 Python 3.11.15（ARCHITECTURE.md 写的"3.12"是过时信息），且不锁定版本时用系统更新的 Python（实测 3.13）会导致 `chromadb==0.4.24` 的间接依赖 `pulsar-client>=3.1.0` 找不到可用发行版，构建直接失败。
+`sync: false` means secret-type values are only filled in by hand in the Render console, never written into this file (which does get committed to Git) — carrying forward CLAUDE.md's constraint of "secrets never hardcoded." Two pitfalls not present in the original draft were found and fixed while implementing this:
+- **`rootDir: backend`**: the repo root has no `requirements.txt` (it only exists at `backend/requirements.txt`) — without this field, `buildCommand` would fail with a file-not-found error.
+- **`PYTHON_VERSION: 3.11.15`**: the local venv is actually Python 3.11.15 (the "3.12" written in ARCHITECTURE.md is stale information), and without pinning the version, using the system's newer Python (observed to be 3.13) causes `chromadb==0.4.24`'s indirect dependency `pulsar-client>=3.1.0` to have no available release, causing the build to fail outright.
 
-本地已按 `buildCommand`/`startCommand` 原文验证：Python 3.11.15 下 `pip install -r requirements.txt --dry-run` 全部 `Requirement already satisfied`；`PORT=8002 uvicorn app.main:app --host 0.0.0.0 --port $PORT` 启动后 `/api/v1/health` 返回 200。
+Already verified locally against the exact `buildCommand`/`startCommand` text: under Python 3.11.15, `pip install -r requirements.txt --dry-run` reports all `Requirement already satisfied`; after starting with `PORT=8002 uvicorn app.main:app --host 0.0.0.0 --port $PORT`, `/api/v1/health` returns 200.
 
-### Step 5 — Render 控制台环境变量核对清单（已完成，PM 亲自执行）
+### Step 5 — Render console environment-variable checklist (Completed, executed personally by the PM)
 
-| 变量 | 本地 `.env` 现值 | 生产应填 |
+| Variable | Current local `.env` value | Production value |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | 真实 key | 同一个 key（或生产专用 key，视 PM 账单策略） |
-| `TAVILY_API_KEY` | 真实 key | 同上 |
-| `JWT_SECRET_KEY` | `change-me-in-production`（占位值） | **必须**换成随机生成的强密钥，不能沿用占位值上线 |
-| `DATABASE_URL` | Supabase 直连串 | **改用 Supabase Session Pooler 连接串**（见上文决策 2），端口通常 `6543` |
-| `ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `["https://<vercel-域名>"]`——需要等 Step 7 部署出前端后才知道确切域名，见里程碑 D |
+| `ANTHROPIC_API_KEY` | real key | the same key (or a production-specific key, depending on the PM's billing strategy) |
+| `TAVILY_API_KEY` | real key | same as above |
+| `JWT_SECRET_KEY` | `change-me-in-production` (placeholder) | **must** be swapped for a randomly generated strong key — the placeholder cannot go live |
+| `DATABASE_URL` | Supabase direct-connection string | **switch to the Supabase Session Pooler connection string** (see Decision 2 above), port usually `6543` |
+| `ALLOWED_ORIGINS` | `["http://localhost:5173"]` | `["https://<vercel-domain>"]` — the exact domain is only known after the frontend is deployed in Step 7, see Milestone D |
 
-PM 已在 Render 控制台创建服务并填好以上 5 个环境变量，服务可正常启动。具体密钥值、Supabase Pooler 连接串、最终 `ALLOWED_ORIGINS` 内容均由 PM 在控制台内直接填写，未经 AI 之手，符合 CLAUDE.md「密钥不硬编码、不经 AI」的约束。
+The PM has already created the service in the Render console and filled in the above 5 environment variables; the service starts up normally. The specific secret values, the Supabase Pooler connection string, and the final `ALLOWED_ORIGINS` content were all entered directly by the PM in the console, never passing through the AI — consistent with CLAUDE.md's constraint that "secrets are never hardcoded, never handled by the AI."
 
 ---
 
-## 里程碑 C：前端 Vercel 部署（已完成）
+## Milestone C: Frontend Vercel Deployment (Completed)
 
-### Step 6 — 校验 `frontend/vercel.json`（已核实）
+### Step 6 — Verify `frontend/vercel.json` (Confirmed)
 
-Phase4 Step4 已经提前放好 SPA 回退配置，本步只做确认，不重复创建。AI 侧读取本地文件确认内容与预期完全一致：
+Phase 4 Step 4 already put the SPA fallback config in place ahead of time — this step is only a confirmation, not a re-creation. The AI side read the local file and confirmed the content exactly matches expectations:
 
 ```json
 { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
 ```
 
-### Step 7 — Vercel 环境变量（已完成，PM 亲自执行）
+### Step 7 — Vercel environment variables (Completed, executed personally by the PM)
 
-`VITE_API_BASE_URL` 本地是相对路径 `/api`（命中 Vite Proxy）；生产环境前后端不同源，没有 Proxy 兜底，必须改成 Render 后端的完整 URL（例如 `https://aaf-api.onrender.com/api`），直接依赖 Step 4 的 `ALLOWED_ORIGINS` 配置和 `app/main.py` 里已有的 CORSMiddleware 放行。PM 已在 Vercel 控制台填好这个环境变量并完成部署。
-
----
-
-## 里程碑 D：生产 CORS 联调（已完成）
-
-### Step 8 — 部署顺序与 `ALLOWED_ORIGINS` 回填（已完成，PM 亲自执行）
-
-存在一个先后依赖：Render 后端的 `ALLOWED_ORIGINS` 需要填 Vercel 分配的域名，但 Vercel 域名要部署过一次才知道。执行顺序：
-
-```
-1. 先部署前端（Step 6/7），拿到 Vercel 分配的域名（如 aaf-product.vercel.app）
-2. 回填 Render 的 ALLOWED_ORIGINS 环境变量为这个域名
-3. 触发 Render 重新部署，使 CORS 配置生效
-4. 前端重新请求，确认不再有 CORS 报错
-```
+`VITE_API_BASE_URL` is the relative path `/api` locally (hitting the Vite proxy); in production the frontend and backend are on different origins with no proxy as a fallback, so it must be changed to the Render backend's full URL (e.g. `https://aaf-api.onrender.com/api`), relying directly on Step 4's `ALLOWED_ORIGINS` configuration and the CORSMiddleware already in place in `app/main.py`. The PM has already filled in this environment variable in the Vercel console and completed the deployment.
 
 ---
 
-## 里程碑 E（可选，不阻塞部署）：健康检查补全
+## Milestone D: Production CORS Integration Testing (Completed)
 
-### Step 9 — `/api/v1/health` 补充 ChromaDB 连通性
+### Step 8 — Deployment order and `ALLOWED_ORIGINS` backfill (Completed, executed personally by the PM)
 
-Phase4 审计时已经指出 `/api/v1/health` 只检查了 DB（`SELECT 1`），没有覆盖 ARCHITECTURE.md §6 文档里写的"DB + ChromaDB 连通性"。当时判定是文档/实现的小偏差，优先级低，未修。放到本阶段重新评估的原因：Render 的 `healthCheckPath` 会持续调这个端点判断实例是否存活——如果里程碑 A 的 `reseed_from_supabase()` 在某次冷启动时失败或被跳过（比如 Supabase 连接失败、`DATABASE_URL` 配置错误），当前实现依然会返回 `200 {"status":"ok","db":"connected"}`，把一个真实的数据故障掩盖成"一切正常"。
-
-建议做法：复用 `rag_service.py` 已有的模块级 `_collection`，加一次轻量 `collection.count()` 调用，失败或返回 0 时在响应里体现出来，不需要新起 client。标记为可选，因为不影响部署本身能否跑通——是可观测性加固，不是阻塞项。
-
----
-
-## 阶段验收测试（PM 已确认部署完成）
-
-不同于前几个阶段"本地手动走查"，本阶段验收必须在**生产域名**下进行，因为核心风险（CORS、ChromaDB 持久化）本质上是"本地永远测不出来"的一类问题。PM 已确认整体部署完成；以下清单留存为生产环境的验收参考，如后续怀疑生产行为异常，可按此逐条复查：
+There's an ordering dependency: the Render backend's `ALLOWED_ORIGINS` needs the domain Vercel assigns, but the Vercel domain is only known after it's been deployed once. Execution order:
 
 ```
-1. curl https://<render-域名>/api/v1/health → 200
-
-2. 浏览器访问 Vercel 域名，走一遍 student 向导全流程，打开 Network 面板确认
-   请求真的打到了 Render 域名（不是意外还在打 localhost 或残留的相对路径）。
-
-3. 登录闭环：在生产环境注册一个新账号 → 登录 → 刷新页面确认登录态不丢
-   （localStorage token 在生产 HTTPS 域名下依然生效）。
-
-4. Guide 历史 + 分享链接：登录后生成一条 Guide → /history 能看到 → 复制
-   /guide/:id 链接，用隐身窗口（未登录）打开，确认匿名可访问（Optional 鉴权语义）。
-
-5. 贡献审核闭环：提交一条新的学长经验 → 管理员账号登录生产环境 →
-   /admin/contributions 里 approve → 重新生成一次同课程的 Guide，确认检索到
-   刚才这条新 tip（证明生产环境的 ChromaDB 写入路径本身是通的）。
-
-6. 【本阶段最关键的一步，之前从未验证过】手动触发一次 Render 重新部署
-   （例如推一个空 commit），部署完成后重复步骤 5 的检索确认。如果这条 tip
-   还能被检索到，说明里程碑 A 的 Supabase 动态重灌逻辑（`lifespan` 里的
-   `reseed_from_supabase()`）在生产环境真的生效了；如果检索不到，说明
-   `DATABASE_URL` 或 `reseed_from_supabase()` 的调用配置有问题，需要回到
-   里程碑 A 重新核查——步骤 1-5 全部通过但跳过这一步，等于完全没有验证过
-   持久化方案本身（本地已经用"手动清空 collection 再冷启动"模拟过一次，
-   这一步是生产环境下的真实复现）。
-
-7. CORS 校验：用 curl 从一个不在白名单里的 Origin 发起跨域请求
-   （curl -H "Origin: https://evil.example.com" ...），确认被拒绝，
-   证明生产配置没有退化成通配符 "*"。
+1. Deploy the frontend first (Step 6/7), obtaining the domain Vercel assigns (e.g. aaf-product.vercel.app)
+2. Backfill Render's ALLOWED_ORIGINS environment variable with this domain
+3. Trigger a Render redeploy, so the CORS configuration takes effect
+4. Have the frontend make a request again, confirming there are no more CORS errors
 ```
 
 ---
 
-## 收尾（Phase 5 已完成）
+## Milestone E (Optional, Non-Blocking for Deployment): Health-Check Completion
 
-CLAUDE.md 路线图表格里 Phase 5 是当前规划的最后一个阶段，本文件不再设"与 Phase 6 的边界"小节。里程碑 A~D 已全部完成，PM 已确认 `backend/` 部署至 Render、`frontend/` 部署至 Vercel 并整体可用；AAF 在 ARCHITECTURE.md 定义的目标架构下完整闭环上线。里程碑 E（Step 9，健康检查补全 ChromaDB 连通性）标记为可选加固项，未阻塞本次部署，留待后续按需处理。如果后续有新的迭代需求，应作为独立的新阶段文档另起，而不是塞进本文件。
+### Step 9 — Add ChromaDB connectivity to `/api/v1/health`
 
-*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约。文首两项部署决策均已落地：ChromaDB 持久化方案拍板为方案 C（里程碑 A、里程碑 B Step 4）；Supabase 连接池已由 PM 在里程碑 B Step 5 执行时改用 Session Pooler 连接串。全部控制台操作均由 PM 本人持账号权限完成。*
+The Phase 4 audit already pointed out that `/api/v1/health` only checks the DB (`SELECT 1`), not covering the "DB + ChromaDB connectivity" written in ARCHITECTURE.md §6's documentation. At the time this was judged a minor doc/implementation mismatch, low priority, and left unfixed. Reason for re-evaluating it in this phase: Render's `healthCheckPath` continuously calls this endpoint to judge whether the instance is alive — if Milestone A's `reseed_from_supabase()` fails or gets skipped during some cold start (e.g. a Supabase connection failure, a misconfigured `DATABASE_URL`), the current implementation would still return `200 {"status":"ok","db":"connected"}`, masking a real data failure as "everything is fine."
+
+Suggested approach: reuse `rag_service.py`'s existing module-level `_collection`, add one lightweight `collection.count()` call, and surface it in the response if it fails or returns 0 — no need to spin up a new client. Marked as optional, since it doesn't affect whether the deployment itself can run — it's observability hardening, not a blocking item.
+
+---
+
+## Phase Acceptance Tests (PM Has Confirmed Deployment Complete)
+
+Unlike the "manual local walkthrough" of previous phases, this phase's acceptance testing must happen against the **production domain**, because the core risks (CORS, ChromaDB persistence) are fundamentally the kind of problem that "can never be tested locally." The PM has confirmed the overall deployment is complete; the checklist below is kept as a reference for production acceptance — if production behavior is ever suspected to be off, it can be re-checked item by item:
+
+```
+1. curl https://<render-domain>/api/v1/health → 200
+
+2. Visit the Vercel domain in a browser, walk through the full student wizard flow, open the Network
+   panel and confirm requests are genuinely hitting the Render domain (not accidentally still hitting
+   localhost or a leftover relative path).
+
+3. Login loop: register a new account in the production environment → log in → refresh the page and
+   confirm login state isn't lost (the localStorage token still works under the production HTTPS domain).
+
+4. Guide history + share link: generate a Guide while logged in → confirm it's visible at /history →
+   copy the /guide/:id link, open it in an incognito window (not logged in), confirm anonymous access
+   works (Optional-auth semantics).
+
+5. Contribution review loop: submit a new senior experience → log into the production environment with
+   an admin account → approve it in /admin/contributions → generate a new Guide for the same course,
+   confirm the newly submitted tip is retrieved (proving the production ChromaDB write path itself works).
+
+6. [The single most important step in this phase, never verified before] Manually trigger a Render
+   redeploy (e.g. push an empty commit); once the deployment finishes, repeat step 5's retrieval check.
+   If that tip can still be retrieved, it means Milestone A's dynamic Supabase-reseeding logic (the
+   `reseed_from_supabase()` inside `lifespan`) genuinely works in production; if it can't be retrieved,
+   there's a problem with either `DATABASE_URL` or how `reseed_from_supabase()` is being invoked, and
+   Milestone A needs to be re-checked — passing steps 1-5 while skipping this one would mean the
+   persistence strategy itself was never actually verified (locally this was already simulated once via
+   "manually clear the collection, then cold start"; this step is the real-world reproduction in
+   production).
+
+7. CORS check: use curl to make a cross-origin request from an Origin that isn't on the allowlist
+   (curl -H "Origin: https://evil.example.com" ...), confirm it's rejected, proving the production
+   configuration hasn't degraded into a wildcard "*".
+```
+
+---
+
+## Wrap-Up (Phase 5 Complete)
+
+Phase 5 is the final phase currently planned in CLAUDE.md's roadmap table, so this file does not have a "Boundary with Phase 6" section. Milestones A through D have all been completed; the PM has confirmed `backend/` is deployed to Render and `frontend/` is deployed to Vercel, and the whole system is usable. AAF is now fully live, end to end, under the target architecture defined in ARCHITECTURE.md. Milestone E (Step 9, adding ChromaDB connectivity to the health check) is marked as an optional hardening item — it did not block this deployment, and is left for later, as needed. If new iteration requirements come up later, they should be started as an independent new phase document, rather than stuffed into this file.
+
+*This file was generated by the architect. Code implementation must strictly follow the directory structure and interface contracts in ARCHITECTURE.md. Both deployment decisions at the top of this document have been implemented: the ChromaDB persistence strategy was decided as Plan C (Milestone A, Milestone B Step 4); the Supabase connection pool was switched to the Session Pooler connection string by the PM while executing Milestone B Step 5. All console operations were performed personally by the PM using their own account credentials.*

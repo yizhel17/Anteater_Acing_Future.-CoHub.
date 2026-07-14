@@ -1,69 +1,69 @@
-# Phase 1 执行手册：FastAPI 项目脚手架 + 核心路由迁移
+# Phase 1 Execution Manual: FastAPI Project Scaffolding + Core Route Migration
 
-> **状态**：待执行  
-> **前置条件**：Phase 0 已完成并 `git commit`  
-> **验收目标**：`POST /api/v1/guide/generate` 在 FastAPI 下真实响应，质量对齐原 Flask 版本  
-> **协作约束**：每步执行前等待确认，执行后等待本地测试通过并 `git commit`，再进行下一步
+> **Status**: Pending
+> **Prerequisite**: Phase 0 completed and `git commit`ed
+> **Acceptance goal**: `POST /api/v1/guide/generate` responds for real under FastAPI, with quality matching the original Flask version
+> **Collaboration constraint**: Wait for confirmation before each step; after execution, wait for local tests to pass and a `git commit` before moving to the next step
 
 ---
 
-## 现状摘要
+## Current State Summary
 
-| 项目 | 当前状态 |
+| Item | Current State |
 |---|---|
-| 框架 | Flask（`app.py` 单文件 600+ 行） |
-| 向量数据库 | `chroma_db/`（根目录） |
-| 依赖清单 | 根目录 `requirements.txt`，含 flask/gunicorn |
-| 部署入口 | `Procfile`（gunicorn） |
-| 目标结构 | `backend/` 分层 FastAPI 工程（见 ARCHITECTURE.md §2） |
+| Framework | Flask (single `app.py` file, 600+ lines) |
+| Vector database | `chroma_db/` (project root) |
+| Dependency manifest | root-level `requirements.txt`, includes flask/gunicorn |
+| Deployment entrypoint | `Procfile` (gunicorn) |
+| Target structure | layered FastAPI project under `backend/` (see ARCHITECTURE.md §2) |
 
 ---
 
-## 里程碑 A：依赖层
+## Milestone A: Dependency Layer
 
-### Step 1 — 新建 `backend/requirements.txt`
+### Step 1 — Create `backend/requirements.txt`
 
-**阶段目标**：声明 FastAPI 生态的完整依赖，彻底移除 Flask/Gunicorn。
+**Stage goal**: Declare the complete FastAPI-ecosystem dependencies, fully removing Flask/Gunicorn.
 
-**技术细节**：
+**Technical details**:
 
-移除以下旧依赖：
+Remove the following legacy dependencies:
 - `flask`
 - `gunicorn`
 
-新增以下依赖：
+Add the following dependencies:
 
-| 包名 | 版本约束 | 用途 |
+| Package | Version constraint | Purpose |
 |---|---|---|
-| `fastapi` | 无固定 | 框架核心，替代 Flask |
-| `uvicorn[standard]` | 无固定 | ASGI 服务器，替代 gunicorn |
-| `sqlalchemy[asyncio]` | 无固定 | 异步 ORM 支持 |
-| `asyncpg` | 无固定 | PostgreSQL 异步驱动（Supabase 连接） |
-| `pydantic-settings` | 无固定 | Pydantic v2 `BaseSettings`，读取 `.env` |
-| `httpx` | 无固定 | 异步 HTTP 客户端（Anthropic SDK async 依赖） |
-| `python-jose[cryptography]` | 无固定 | JWT 签发/校验（Phase 2 鉴权预埋） |
-| `passlib[bcrypt]` | 无固定 | bcrypt 密码哈希（Phase 2 鉴权预埋） |
+| `fastapi` | unpinned | Core framework, replaces Flask |
+| `uvicorn[standard]` | unpinned | ASGI server, replaces gunicorn |
+| `sqlalchemy[asyncio]` | unpinned | Async ORM support |
+| `asyncpg` | unpinned | PostgreSQL async driver (Supabase connection) |
+| `pydantic-settings` | unpinned | Pydantic v2 `BaseSettings`, reads `.env` |
+| `httpx` | unpinned | Async HTTP client (Anthropic SDK async dependency) |
+| `python-jose[cryptography]` | unpinned | JWT issuing/verification (pre-wired for Phase 2 auth) |
+| `passlib[bcrypt]` | unpinned | bcrypt password hashing (pre-wired for Phase 2 auth) |
 
-保留以下现有依赖（版本约束不变）：
+Keep the following existing dependencies (version constraints unchanged):
 - `anthropic`
 - `tavily-python`
 - `chromadb==0.4.24`
 - `numpy<2.0.0`
 - `python-dotenv`
 
-**文件位置**：`backend/requirements.txt`（全新文件，与根目录旧版并存，旧版暂不删除）
+**File location**: `backend/requirements.txt` (a brand-new file, coexisting with the old root-level version; the old one is not deleted yet)
 
 ---
 
-## 里程碑 B：项目骨架
+## Milestone B: Project Skeleton
 
-### Step 2 — 批量创建所有 `__init__.py` 空占位文件
+### Step 2 — Batch-create all empty `__init__.py` placeholder files
 
-**阶段目标**：建立 `backend/` 下完整的 Python package 层级结构，使后续所有 import 语句合法。
+**Stage goal**: Establish the complete Python package hierarchy under `backend/`, so that all subsequent import statements are valid.
 
-**技术细节**：
+**Technical details**:
 
-以下文件全部为**空文件**（0 字节），仅声明 package 边界：
+The following files are all **empty files** (0 bytes), serving only to declare package boundaries:
 
 ```
 backend/app/__init__.py
@@ -77,43 +77,43 @@ backend/app/schemas/__init__.py
 backend/app/services/__init__.py
 ```
 
-> 这是唯一允许批量操作的步骤，因为所有文件均无实质逻辑。
+> This is the only step where batch operations are allowed, since none of these files contain any real logic.
 
 ---
 
-## 里程碑 C：配置层
+## Milestone C: Configuration Layer
 
-### Step 3 — 新建 `backend/app/core/config.py`
+### Step 3 — Create `backend/app/core/config.py`
 
-**阶段目标**：建立统一的环境变量读取入口，所有密钥/配置通过此模块访问，代码中零硬编码。
+**Stage goal**: Establish a single entry point for reading environment variables — all secrets/config are accessed through this module, with zero hardcoding in the code.
 
-**技术细节**：
+**Technical details**:
 
-使用 Pydantic v2 `BaseSettings`。`model_config = SettingsConfigDict(env_file=".env", extra="ignore")`。
+Uses Pydantic v2 `BaseSettings`. `model_config = SettingsConfigDict(env_file=".env", extra="ignore")`.
 
-声明以下字段：
+Declare the following fields:
 
-| 字段名 | 类型 | 默认值 | 用途 |
+| Field | Type | Default | Purpose |
 |---|---|---|---|
-| `DATABASE_URL` | `str` | 无 | Supabase `postgresql+asyncpg://...` 连接串 |
-| `ANTHROPIC_API_KEY` | `str` | 无 | Claude API 密钥 |
-| `TAVILY_API_KEY` | `str` | 无 | Tavily 搜索密钥 |
-| `JWT_SECRET_KEY` | `str` | 无 | JWT 签名密钥 |
-| `JWT_ALGORITHM` | `str` | `"HS256"` | JWT 算法 |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `int` | `60` | Access Token 有效期 |
-| `ALLOWED_ORIGINS` | `list[str]` | `["http://localhost:5173"]` | CORS 白名单 |
+| `DATABASE_URL` | `str` | none | Supabase `postgresql+asyncpg://...` connection string |
+| `ANTHROPIC_API_KEY` | `str` | none | Claude API key |
+| `TAVILY_API_KEY` | `str` | none | Tavily search key |
+| `JWT_SECRET_KEY` | `str` | none | JWT signing key |
+| `JWT_ALGORITHM` | `str` | `"HS256"` | JWT algorithm |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `int` | `60` | Access token validity period |
+| `ALLOWED_ORIGINS` | `list[str]` | `["http://localhost:5173"]` | CORS allowlist |
 
-在模块底部创建全局单例：`settings = Settings()`，其他模块统一 `from app.core.config import settings` 调用。
+At the bottom of the module, create a global singleton: `settings = Settings()`; all other modules uniformly call it via `from app.core.config import settings`.
 
 ---
 
-### Step 4 — 新建 `backend/.env.example`
+### Step 4 — Create `backend/.env.example`
 
-**阶段目标**：提供所有环境变量的模板文件，提交 Git，供团队成员本地配置参考。
+**Stage goal**: Provide a template file for all environment variables, committed to Git, for team members to reference when configuring locally.
 
-**技术细节**：
+**Technical details**:
 
-包含 Step 3 中所有字段的键名，值全部留空或填写无意义占位符：
+Contains the key names of every field from Step 3; values are all left blank or filled with meaningless placeholders:
 
 ```
 DATABASE_URL=postgresql+asyncpg://user:password@host:port/dbname
@@ -125,19 +125,19 @@ ACCESS_TOKEN_EXPIRE_MINUTES=60
 ALLOWED_ORIGINS=http://localhost:5173
 ```
 
-> `.env`（真实密钥）已在 `.gitignore` 中，只有 `.env.example` 提交 Git。
+> `.env` (real secrets) is already in `.gitignore` — only `.env.example` is committed to Git.
 
 ---
 
-## 里程碑 D：数据库层
+## Milestone D: Database Layer
 
-### Step 5 — 新建 `backend/app/db/base.py`
+### Step 5 — Create `backend/app/db/base.py`
 
-**阶段目标**：建立 SQLAlchemy ORM 的基类，所有 Model 继承此 Base。
+**Stage goal**: Establish the SQLAlchemy ORM base class; all models inherit from this `Base`.
 
-**技术细节**：
+**Technical details**:
 
-使用 SQLAlchemy 2.0+ 的 `DeclarativeBase`（非旧式 `declarative_base()`）：
+Uses SQLAlchemy 2.0+'s `DeclarativeBase` (not the legacy `declarative_base()`):
 
 ```python
 from sqlalchemy.orm import DeclarativeBase
@@ -146,35 +146,35 @@ class Base(DeclarativeBase):
     pass
 ```
 
-所有 ORM 模型（Step 7-9）均从此 `Base` 继承。
+All ORM models (Steps 7-9) inherit from this `Base`.
 
 ---
 
-### Step 6 — 新建 `backend/app/db/session.py`
+### Step 6 — Create `backend/app/db/session.py`
 
-**阶段目标**：配置异步数据库引擎和 Session 工厂，为 FastAPI 依赖注入做好准备。
+**Stage goal**: Configure the async database engine and session factory, preparing for FastAPI dependency injection.
 
-**技术细节**：
+**Technical details**:
 
-- 引擎：`create_async_engine(settings.DATABASE_URL, pool_size=5, max_overflow=10, echo=False)`
-- Session 工厂：`AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)`
-- 暴露 `async_engine` 供 `main.py` 的 lifespan 事件使用（将来做连接池预热/关闭）
+- Engine: `create_async_engine(settings.DATABASE_URL, pool_size=5, max_overflow=10, echo=False)`
+- Session factory: `AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)`
+- Expose `async_engine` for use by `main.py`'s lifespan event (for future connection-pool warmup/shutdown)
 
-> **重要**：此步骤只写配置代码，不实际连接 Supabase。`DATABASE_URL` 可在 `.env` 中暂时留空，引擎仅在第一次真实 DB 调用时才建立连接。Phase 2 才做 Supabase 连通性验证。
+> **Important**: This step only writes configuration code — it does not actually connect to Supabase. `DATABASE_URL` can be temporarily left blank in `.env`; the engine only establishes a connection on the first real DB call. Supabase connectivity verification happens in Phase 2.
 
 ---
 
-### Step 7 — 新建 `backend/app/models/user.py`
+### Step 7 — Create `backend/app/models/user.py`
 
-**阶段目标**：建立 `users` 表的 ORM 映射模型。
+**Stage goal**: Establish the ORM mapping model for the `users` table.
 
-**技术细节**：
+**Technical details**:
 
-字段对齐 ARCHITECTURE.md §5 的 `users` 表定义：
+Fields align with the `users` table definition in ARCHITECTURE.md §5:
 
-| 字段 | SQLAlchemy 类型 | 约束 |
+| Field | SQLAlchemy Type | Constraint |
 |---|---|---|
-| `id` | `Uuid` | PK，`default=uuid.uuid4` |
+| `id` | `Uuid` | PK, `default=uuid.uuid4` |
 | `email` | `String(255)` | `unique=True, nullable=False` |
 | `hashed_pw` | `String(255)` | `nullable=False` |
 | `display_name` | `String(100)` | nullable |
@@ -184,84 +184,84 @@ class Base(DeclarativeBase):
 
 ---
 
-### Step 8 — 新建 `backend/app/models/guide.py`
+### Step 8 — Create `backend/app/models/guide.py`
 
-**阶段目标**：建立 `guides` 表的 ORM 映射模型（AI 生成历史）。
+**Stage goal**: Establish the ORM mapping model for the `guides` table (AI generation history).
 
-**技术细节**：
+**Technical details**:
 
-| 字段 | SQLAlchemy 类型 | 约束 |
+| Field | SQLAlchemy Type | Constraint |
 |---|---|---|
-| `id` | `Uuid` | PK，`default=uuid.uuid4` |
-| `user_id` | `Uuid` | FK → `users.id`，**nullable**（支持匿名） |
+| `id` | `Uuid` | PK, `default=uuid.uuid4` |
+| `user_id` | `Uuid` | FK → `users.id`, **nullable** (supports anonymous) |
 | `role` | `String(10)` | |
 | `courses` | `ARRAY(Text)` | |
 | `confidence` | `Float` | |
 | `goals` | `ARRAY(Text)` | |
 | `user_query` | `Text` | nullable |
-| `response_md` | `Text` | AI 生成 Markdown 全文 |
+| `response_md` | `Text` | Full AI-generated Markdown text |
 | `tokens_used` | `Integer` | |
 | `created_at` | `DateTime(timezone=True)` | `server_default=func.now()` |
 
 ---
 
-### Step 9 — 新建 `backend/app/models/rating.py`
+### Step 9 — Create `backend/app/models/rating.py`
 
-**阶段目标**：建立 `ratings` 表的 ORM 映射模型（满意度持久化）。
+**Stage goal**: Establish the ORM mapping model for the `ratings` table (satisfaction-score persistence).
 
-**技术细节**：
+**Technical details**:
 
-| 字段 | SQLAlchemy 类型 | 约束 |
+| Field | SQLAlchemy Type | Constraint |
 |---|---|---|
-| `id` | `Uuid` | PK，`default=uuid.uuid4` |
-| `guide_id` | `Uuid` | FK → `guides.id`，`nullable=False` |
-| `user_id` | `Uuid` | FK → `users.id`，**nullable** |
-| `score` | `SmallInteger` | CHECK IN `(1, 0, -1)`，对应 good/neutral/bad |
+| `id` | `Uuid` | PK, `default=uuid.uuid4` |
+| `guide_id` | `Uuid` | FK → `guides.id`, `nullable=False` |
+| `user_id` | `Uuid` | FK → `users.id`, **nullable** |
+| `score` | `SmallInteger` | CHECK IN `(1, 0, -1)`, corresponding to good/neutral/bad |
 | `created_at` | `DateTime(timezone=True)` | `server_default=func.now()` |
 
 ---
 
-## 里程碑 E：Schema 层（API 契约）
+## Milestone E: Schema Layer (API Contract)
 
-### Step 10 — 新建 `backend/app/schemas/guide.py`
+### Step 10 — Create `backend/app/schemas/guide.py`
 
-**阶段目标**：用 Pydantic v2 严格定义 Guide 接口的请求/响应结构，作为前后端契约。
+**Stage goal**: Strictly define the Guide endpoint's request/response structures with Pydantic v2, serving as the frontend/backend contract.
 
-**技术细节**：
+**Technical details**:
 
-`GuideRequest`（请求体）：
+`GuideRequest` (request body):
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| `role` | `Literal["student", "senior"]` | 角色 |
+| `role` | `Literal["student", "senior"]` | Role |
 | `courses` | `list[str]` | `min_length=1` |
 | `confidence` | `float` | `ge=0, le=10` |
 | `goals` | `list[str]` | |
 | `user_query` | `str \| None` | `default=None` |
 
-`GuideResponse`（响应体，对齐 ARCHITECTURE.md §6）：
+`GuideResponse` (response body, aligned with ARCHITECTURE.md §6):
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
 | `guide_id` | `UUID` | |
-| `guide_markdown` | `str` | AI 生成的完整 Markdown |
-| `sources_used` | `list[str]` | Tavily 来源 URL 列表 |
-| `tips_count` | `int` | ChromaDB 命中的 tip 数量 |
-| `tokens_used` | `int` | Claude 实际消耗 token |
+| `guide_markdown` | `str` | Full AI-generated Markdown |
+| `sources_used` | `list[str]` | List of Tavily source URLs |
+| `tips_count` | `int` | Number of tips matched from ChromaDB |
+| `tokens_used` | `int` | Actual tokens consumed by Claude |
 
 ---
 
-### Step 11 — 新建 `backend/app/schemas/rating.py`
+### Step 11 — Create `backend/app/schemas/rating.py`
 
-**阶段目标**：定义评分接口的请求/响应 Schema。
+**Stage goal**: Define the request/response schema for the rating endpoint.
 
-**技术细节**：
+**Technical details**:
 
-`RatingRequest`：
+`RatingRequest`:
 - `guide_id: UUID`
-- `score: Literal[-1, 0, 1]`（-1=bad，0=neutral，1=good）
+- `score: Literal[-1, 0, 1]` (-1=bad, 0=neutral, 1=good)
 
-`RatingResponse`：
+`RatingResponse`:
 - `id: UUID`
 - `guide_id: UUID`
 - `score: int`
@@ -269,85 +269,85 @@ class Base(DeclarativeBase):
 
 ---
 
-## 里程碑 F：服务层（核心业务逻辑迁移）
+## Milestone F: Service Layer (Core Business Logic Migration)
 
-### Step 12 — 新建 `backend/app/services/rag_service.py`
+### Step 12 — Create `backend/app/services/rag_service.py`
 
-**阶段目标**：将 `rag.py` 的 ChromaDB 检索逻辑迁移为异步接口，供路由层调用。
+**Stage goal**: Migrate `rag.py`'s ChromaDB retrieval logic into an async interface, for the route layer to call.
 
-**技术细节**：
+**Technical details**:
 
-ChromaDB 客户端是**同步**库，不能直接在 `async` 函数中调用（会阻塞事件循环）。解决方案：用 `asyncio.to_thread()` 将同步调用推到线程池。
+The ChromaDB client is a **synchronous** library and cannot be called directly inside an `async` function (it would block the event loop). Solution: use `asyncio.to_thread()` to push the synchronous call onto a thread pool.
 
-核心逻辑从 `rag.py` 的 `retrieve_tips()` 原样移植，仅更改：
+The core logic is ported as-is from `rag.py`'s `retrieve_tips()`, with only these changes:
 
-1. `PersistentClient(path=...)` 的路径从根目录改为 `backend/chroma_db/`（配合 Step 20 的目录迁移）
-2. 外层用 `asyncio.to_thread` 包装：
+1. The `PersistentClient(path=...)` path changes from the project root to `backend/chroma_db/` (in line with the directory migration in Step 20)
+2. Wrapped on the outside with `asyncio.to_thread`:
 
 ```python
 async def retrieve_tips_async(query: str, course: str, n: int = 3) -> list[str]:
     return await asyncio.to_thread(_retrieve_tips_sync, query, course, n)
 ```
 
-函数返回 `list[str]`，每个元素是一条学长经验文本。
+The function returns `list[str]`, where each element is one piece of senior-student feedback text.
 
 ---
 
-### Step 13 — 新建 `backend/app/services/search_service.py`
+### Step 13 — Create `backend/app/services/search_service.py`
 
-**阶段目标**：将 `app.py` 中的 Tavily 搜索逻辑提取为独立异步服务，含完整的来源标签逻辑。
+**Stage goal**: Extract the Tavily search logic from `app.py` into a standalone async service, including the complete source-tagging logic.
 
-**技术细节**：
+**Technical details**:
 
-`TavilyClient.search()` 也是**同步**调用，同样用 `asyncio.to_thread()` 包装。
+`TavilyClient.search()` is also a **synchronous** call, and is likewise wrapped with `asyncio.to_thread()`.
 
-核心函数签名：
+Core function signature:
 
 ```python
 async def tavily_search(courses: list[str]) -> tuple[list[str], str]:
-    # 返回: (sources_used: list[str], formatted_str: str)
+    # Returns: (sources_used: list[str], formatted_str: str)
 ```
 
-内部逻辑原样从 `app.py` 迁移：
-- 只取 `courses[:1]`（首门课程），避免超时
-- 发起两个定向查询：`{course} UCI professor exam difficulty study tips reddit student experience` 和 `{course} UCI internship career relevance skills employers`
-- 来源标签逻辑**完整保留**：
+The internal logic is migrated as-is from `app.py`:
+- Only takes `courses[:1]` (the first course), to avoid timeouts
+- Issues two targeted queries: `{course} UCI professor exam difficulty study tips reddit student experience` and `{course} UCI internship career relevance skills employers`
+- Source-tagging logic is **fully preserved**:
 
-| URL 特征 | 标签 |
+| URL Pattern | Tag |
 |---|---|
 | `reddit.com` | 📌 r/UCI Forum |
 | `uci.edu` | 🎓 UCI Official |
 | `ratemyprofessors.com` | ⭐ RateMyProfessors |
 | `blind.com` | 💼 Blind SWE Intel |
 | `linkedin.com` | 🔗 LinkedIn |
-| 其他 | 🌐 Web |
+| other | 🌐 Web |
 
-- 去重逻辑（按前 60 字符 key 去重）原样保留
-- Tavily 失败时 `return ([], "")` — **不影响主流程**（与原代码 `except: pass` 行为一致）
+- Deduplication logic (dedupes by a key of the first 60 characters) is preserved as-is
+- On Tavily failure, `return ([], "")` — **does not affect the main flow** (consistent with the original code's `except: pass` behavior)
 
 ---
 
-### Step 14 — 新建 `backend/app/services/ai_service.py`
+### Step 14 — Create `backend/app/services/ai_service.py`
 
-**阶段目标**：迁移 Claude API 调用逻辑和完整的 `SYSTEM_PROMPT`，实现异步生成接口。
+**Stage goal**: Migrate the Claude API call logic and the complete `SYSTEM_PROMPT`, implementing an async generation interface.
 
-**技术细节**：
+**Technical details**:
 
-1. **SYSTEM_PROMPT**：从 `app.py` 第 41-123 行原样复制，不修改任何内容。
-2. **客户端初始化**：使用 `httpx.AsyncClient(timeout=90.0)` 创建异步 Anthropic 客户端：
+1. **SYSTEM_PROMPT**: copied verbatim from `app.py` lines 41-123, with no content modified.
+2. **Client initialization**: use `httpx.AsyncClient(timeout=90.0)` to create the async Anthropic client:
    ```python
    client = Anthropic(
        api_key=settings.ANTHROPIC_API_KEY,
        http_client=httpx.AsyncClient(timeout=90.0)
    )
    ```
-3. **核心函数签名**：
+3. **Core function signature**:
    ```python
    async def generate_guide(user_context: str) -> tuple[str, int]:
-       # 返回: (cleaned_markdown: str, tokens_used: int)
+       # Returns: (cleaned_markdown: str, tokens_used: int)
    ```
-4. **`<thinking>` 标签剥离**：用 `re.sub(r"<thinking>.*?</thinking>", "", raw, flags=re.DOTALL).strip()` 原样保留。
-5. **用户上下文组装辅助函数**：
+4. **Stripping `<thinking>` tags**: preserved as-is via `re.sub(r"<thinking>.*?</thinking>", "", raw, flags=re.DOTALL).strip()`.
+5. **User-context assembly helper function**:
    ```python
    def build_user_context(
        role: str,
@@ -358,22 +358,22 @@ async def tavily_search(courses: list[str]) -> tuple[list[str], str]:
        senior_tips_str: str,
        search_results: str,
    ) -> str:
-       # 原样迁移 app.py 中 parts[] 的拼装逻辑
+       # Migrated as-is from app.py's parts[] assembly logic
    ```
 
 ---
 
-## 里程碑 G：路由层
+## Milestone G: Route Layer
 
-### Step 15 — 新建 `backend/app/api/deps.py`
+### Step 15 — Create `backend/app/api/deps.py`
 
-**阶段目标**：实现 FastAPI 全局依赖注入函数，供所有路由通过 `Depends()` 使用。
+**Stage goal**: Implement FastAPI's global dependency-injection functions, for all routes to use via `Depends()`.
 
-**技术细节**：
+**Technical details**:
 
-实现 ARCHITECTURE.md §4 定义的三条依赖链：
+Implements the three dependency chains defined in ARCHITECTURE.md §4:
 
-**`get_db()`** — AsyncSession 生命周期管理：
+**`get_db()`** — AsyncSession lifecycle management:
 ```python
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
@@ -387,32 +387,32 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 ```
 
-**`get_current_user()`** — Phase 1 中为 stub，直接返回 `None`（Phase 2 补全 JWT 校验）：
+**`get_current_user()`** — a stub in Phase 1, directly returns `None` (Phase 2 fills in full JWT verification):
 ```python
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    # Phase 2 实现：JWT 校验 → 查询 users 表 → 返回 User 或抛 401
+    # Phase 2 implementation: JWT verification → query users table → return User or raise 401
     raise HTTPException(status_code=401, detail="Auth not implemented yet")
 ```
 
-**`get_optional_user()`** — Token 缺失/无效时返回 `None`：
+**`get_optional_user()`** — returns `None` when the token is missing/invalid:
 ```python
 async def get_optional_user(...) -> User | None:
-    # Phase 1 stub：直接返回 None
+    # Phase 1 stub: directly returns None
     return None
 ```
 
 ---
 
-### Step 16 — 新建 `backend/app/api/v1/routes/guide.py`
+### Step 16 — Create `backend/app/api/v1/routes/guide.py`
 
-**阶段目标**：实现 `POST /guide/generate` 端点，这是 Phase 1 最核心的文件，并发执行 ChromaDB 和 Tavily。
+**Stage goal**: Implement the `POST /guide/generate` endpoint — the single most critical file in Phase 1 — running ChromaDB and Tavily concurrently.
 
-**技术细节**：
+**Technical details**:
 
-端点函数签名：
+Endpoint function signature:
 ```python
 @router.post("/generate", response_model=GuideResponse)
 async def generate_guide(
@@ -422,47 +422,47 @@ async def generate_guide(
 ):
 ```
 
-执行流程（**关键并发优化**）：
+Execution flow (**key concurrency optimization**):
 
 ```
-1. 为每门课程构造 ChromaDB 查询列表
-2. 根据 role 决定是否触发 Tavily（senior 角色跳过）
-3. asyncio.gather 并发执行：
+1. Build a ChromaDB query list for each course
+2. Decide whether to trigger Tavily based on role (skipped for the senior role)
+3. Concurrent execution via asyncio.gather:
    ├── [rag_service.retrieve_tips_async(course) for course in courses]  ← ChromaDB
    └── search_service.tavily_search(courses) if role != "senior" else ("", "")  ← Tavily
-   return_exceptions=True  ← 任一失败不阻断另一个
-4. 组装 senior_tips_str（格式对齐原 app.py 的 lines[] 逻辑）
-5. 调用 ai_service.build_user_context() 组装 user_context
-6. 调用 ai_service.generate_guide(user_context) 获取 (markdown, tokens)
-7. Phase 1 暂不写数据库，guide_id 用 uuid.uuid4() 临时生成
-8. 返回 GuideResponse
+   return_exceptions=True  ← a failure in either one does not block the other
+4. Assemble senior_tips_str (format aligned with the original app.py's lines[] logic)
+5. Call ai_service.build_user_context() to assemble user_context
+6. Call ai_service.generate_guide(user_context) to get (markdown, tokens)
+7. Phase 1 does not write to the database yet; guide_id is temporarily generated via uuid.uuid4()
+8. Return GuideResponse
 ```
 
-相比原 Flask 串行代码，ChromaDB 多课程查询 + Tavily 两个定向搜索**同时并发执行**，理论响应时间缩短 40-60%。
+Compared to the original serial Flask code, the multi-course ChromaDB queries and the two targeted Tavily searches now run **concurrently at the same time**, theoretically cutting response time by 40-60%.
 
-**错误处理**：
-- 任何 service 层异常捕获后记录 `logging.error()`，抛出 `HTTPException(status_code=500, detail=...)`
-- Tavily 失败降级为空结果，不影响主流程（与原代码行为一致）
-
----
-
-### Step 17 — 新建 `backend/app/api/v1/routes/courses.py`
-
-**阶段目标**：提供 `GET /courses` 静态接口，返回支持的 UCI 课程列表。
-
-**技术细节**：
-
-- 从 `templates/index.html` 中提取 80+ 课程代码列表，硬编码为 `COURSES: list[str]` 常量
-- 端点直接返回该列表（无 DB 查询）
-- 响应 Schema：`{"courses": ["ICS 31", "ICS 32", ...]}`
+**Error handling**:
+- Any exception at the service layer is caught, logged via `logging.error()`, and re-raised as `HTTPException(status_code=500, detail=...)`
+- A Tavily failure degrades to an empty result and does not affect the main flow (consistent with the original code's behavior)
 
 ---
 
-### Step 18 — 新建 `backend/app/api/v1/router.py`
+### Step 17 — Create `backend/app/api/v1/routes/courses.py`
 
-**阶段目标**：汇总所有 v1 子路由，提供统一的路由注册入口。
+**Stage goal**: Provide the static `GET /courses` endpoint, returning the list of supported UCI courses.
 
-**技术细节**：
+**Technical details**:
+
+- Extract the list of 80+ course codes from `templates/index.html`, hardcoded as a `COURSES: list[str]` constant
+- The endpoint directly returns this list (no DB query)
+- Response schema: `{"courses": ["ICS 31", "ICS 32", ...]}`
+
+---
+
+### Step 18 — Create `backend/app/api/v1/router.py`
+
+**Stage goal**: Aggregate all v1 sub-routers, providing a unified route-registration entry point.
+
+**Technical details**:
 
 ```python
 from fastapi import APIRouter
@@ -473,31 +473,31 @@ api_router.include_router(guide.router, prefix="/guide", tags=["guide"])
 api_router.include_router(courses.router, prefix="/courses", tags=["courses"])
 ```
 
-Phase 2 会在此处追加 `auth`、`ratings`、`contributions` 路由。
+Phase 2 will append the `auth`, `ratings`, and `contributions` routers here.
 
 ---
 
-## 里程碑 H：应用入口
+## Milestone H: Application Entrypoint
 
-### Step 19 — 新建 `backend/app/main.py`
+### Step 19 — Create `backend/app/main.py`
 
-**阶段目标**：创建 FastAPI 应用实例，注册 CORS 中间件和所有路由，这是 uvicorn 的启动入口。
+**Stage goal**: Create the FastAPI application instance, register the CORS middleware and all routes — this is uvicorn's startup entrypoint.
 
-**技术细节**：
+**Technical details**:
 
-1. **lifespan 上下文管理器**（应用级启动/关闭钩子）：
+1. **lifespan context manager** (application-level startup/shutdown hooks):
    ```python
    @asynccontextmanager
    async def lifespan(app: FastAPI):
-       # startup：将来在此做 DB 连接池预热、ChromaDB 连通检查
+       # startup: connection-pool warmup and ChromaDB connectivity checks will go here in the future
        logger.info("AAF FastAPI starting up...")
        yield
-       # shutdown：关闭 async_engine
+       # shutdown: dispose of async_engine
        await async_engine.dispose()
        logger.info("AAF FastAPI shut down.")
    ```
 
-2. **FastAPI 实例**：
+2. **FastAPI instance**:
    ```python
    app = FastAPI(
        title="AAF API",
@@ -506,67 +506,67 @@ Phase 2 会在此处追加 `auth`、`ratings`、`contributions` 路由。
    )
    ```
 
-3. **CORSMiddleware**（对齐 ARCHITECTURE.md §3 策略 B）：
+3. **CORSMiddleware** (aligned with ARCHITECTURE.md §3 Strategy B):
    ```python
    app.add_middleware(
        CORSMiddleware,
-       allow_origins=settings.ALLOWED_ORIGINS,  # 从环境变量读取，绝不用 "*"
+       allow_origins=settings.ALLOWED_ORIGINS,  # read from environment variable, never use "*"
        allow_credentials=True,
        allow_methods=["*"],
        allow_headers=["*"],
    )
    ```
 
-4. **路由挂载**：
+4. **Route mounting**:
    ```python
    app.include_router(api_router, prefix="/api/v1")
    ```
 
-5. **健康检查端点**（Render 部署必需）：
+5. **Health-check endpoint** (required for Render deployment):
    ```python
    @app.get("/api/v1/health")
    async def health():
        return {"status": "ok", "version": "1.0.0"}
    ```
 
-6. **启动命令**（本地开发）：
+6. **Startup command** (local development):
    ```bash
    cd backend && uvicorn app.main:app --reload --port 8000
    ```
 
 ---
 
-## 里程碑 I：数据目录迁移
+## Milestone I: Data Directory Migration
 
-### Step 20 — 迁移 `chroma_db/` 到 `backend/chroma_db/`
+### Step 20 — Migrate `chroma_db/` to `backend/chroma_db/`
 
-**阶段目标**：将 ChromaDB 数据目录迁移到 `backend/` 下，与 ARCHITECTURE.md 目录树对齐。
+**Stage goal**: Migrate the ChromaDB data directory under `backend/`, aligning with ARCHITECTURE.md's directory tree.
 
-**技术细节**：
+**Technical details**:
 
-执行 shell 命令：
+Run the shell command:
 ```bash
 mv /path/to/AAF_Product/chroma_db /path/to/AAF_Product/backend/chroma_db
 ```
 
-同时确认 `rag_service.py`（Step 12）中 `PersistentClient(path=...)` 的路径已指向新位置。
+Also confirm that the `PersistentClient(path=...)` path in `rag_service.py` (Step 12) now points to the new location.
 
-同步迁移数据文件：
+Migrate the data file at the same time:
 ```bash
 mkdir -p backend/data
 cp AAF_responses.csv backend/data/AAF_responses.csv
 ```
 
-更新 `.gitignore`，确保 `backend/chroma_db/` 下的数据文件不被提交（二进制向量数据无需入库）。
+Update `.gitignore` to ensure the data files under `backend/chroma_db/` are not committed (binary vector data doesn't need to go into version control).
 
 ---
 
-## 整体依赖关系图
+## Overall Dependency Graph
 
 ```
 Step 1  (requirements.txt)
     │
-Step 2  (__init__.py 骨架)
+Step 2  (__init__.py skeleton)
     │
 Step 3  (core/config.py)  ──────────────────────────┐
     │                                                │
@@ -595,28 +595,28 @@ Step 18 (api/v1/router.py) ◄── Step 16/17
     │
 Step 19 (app/main.py) ◄── Step 3/6/18
     │
-Step 20 (chroma_db 目录迁移) ◄── 配合 Step 12 路径
+Step 20 (chroma_db directory migration) ◄── coordinates with Step 12's path
 ```
 
 ---
 
-## 阶段验收测试
+## Phase Acceptance Tests
 
-Step 19 完成后执行：
+Run after Step 19 is complete:
 
 ```bash
-# 终端 1：启动 FastAPI（在 backend/ 目录下）
+# Terminal 1: start FastAPI (from the backend/ directory)
 uvicorn app.main:app --reload --port 8000
 
-# 终端 2：健康检查
+# Terminal 2: health check
 curl http://localhost:8000/api/v1/health
-# 预期: {"status": "ok", "version": "1.0.0"}
+# Expected: {"status": "ok", "version": "1.0.0"}
 
-# 终端 3：课程列表
+# Terminal 3: course list
 curl http://localhost:8000/api/v1/courses
-# 预期: {"courses": ["ICS 31", "ICS 32", ...]}
+# Expected: {"courses": ["ICS 31", "ICS 32", ...]}
 
-# 终端 4：核心 AI 生成接口（需要 .env 中配置真实 API Key）
+# Terminal 4: core AI generation endpoint (requires a real API key configured in .env)
 curl -X POST http://localhost:8000/api/v1/guide/generate \
   -H "Content-Type: application/json" \
   -d '{
@@ -626,27 +626,27 @@ curl -X POST http://localhost:8000/api/v1/guide/generate \
     "goals": ["ace_grade"],
     "user_query": "I just finished ICS 31 with B+"
   }'
-# 预期: {"guide_id": "...", "guide_markdown": "...", "sources_used": [...], "tokens_used": ...}
+# Expected: {"guide_id": "...", "guide_markdown": "...", "sources_used": [...], "tokens_used": ...}
 ```
 
-**验收标准**：
-- 所有端点返回正确状态码（200）
-- `guide_markdown` 内容质量与原 Flask 版本一致
-- 无 `<thinking>` 标签残留在响应中
-- 日志中可见 ChromaDB 和 Tavily 并发调用
+**Acceptance criteria**:
+- All endpoints return the correct status code (200)
+- `guide_markdown` content quality matches the original Flask version
+- No `<thinking>` tag remnants in the response
+- The logs show ChromaDB and Tavily being called concurrently
 
 ---
 
-## 与 Phase 2 的边界
+## Boundary with Phase 2
 
-| 功能 | Phase 1 状态 | Phase 2 完成 |
+| Feature | Phase 1 State | Phase 2 Completion |
 |---|---|---|
-| DB 模型 + Session | 代码存在，未连接真实 Supabase | 连接验证 + 表创建 |
-| `guide_id` | `uuid.uuid4()` 临时生成 | 持久化到 `guides` 表 |
-| 用户认证 | `get_current_user` 为 stub | JWT 注册/登录完整实现 |
-| 评分持久化 | Schema 存在，路由未实现 | `POST /ratings` 写入 DB |
-| `get_optional_user` | 直接返回 `None` | 真实 JWT 解析，匿名返回 None |
+| DB models + Session | Code exists, not yet connected to real Supabase | Connection verified + tables created |
+| `guide_id` | Temporarily generated via `uuid.uuid4()` | Persisted to the `guides` table |
+| User authentication | `get_current_user` is a stub | Full JWT register/login implementation |
+| Rating persistence | Schema exists, route not implemented | `POST /ratings` writes to DB |
+| `get_optional_user` | Directly returns `None` | Real JWT parsing, returns None for anonymous |
 
 ---
 
-*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约。每步执行前必须等待 PM 确认。*
+*This file was generated by the architect. Code implementation must strictly follow the directory structure and interface contracts in ARCHITECTURE.md. Each step must wait for PM confirmation before execution.*

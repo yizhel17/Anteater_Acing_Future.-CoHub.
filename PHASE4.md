@@ -1,57 +1,57 @@
-# Phase 4 执行手册：React + Vite 前端工程，迁移 UI
+# Phase 4 Execution Manual: React + Vite Frontend Project, UI Migration
 
-> **状态**：待执行
-> **前置条件**：Phase 3 已完成并 `git commit`（历史/详情路由、贡献审核闭环、限流、测试均已验证；后端 API 契约自本阶段起冻结，不再新增/变更端点）
-> **验收目标**：`frontend/` 独立 React 18 + Vite + TS 工程本地可跑通；原 `templates/index.html` 三步向导 + 结果卡 + 原子加载动画 100% 视觉还原；登录态、Guide 历史、学长经验提交、管理员审核这四块 Phase2/3 已具备后端能力但从未有 UI 的功能，本阶段补齐前端界面
-> **协作约束**：每步执行前等待确认，执行后等待本地测试通过并 `git commit`，再进行下一步
-
----
-
-## ⚠️ 已与 PM 确认的架构决策（执行前必读）
-
-以下三点是本阶段开工前审计代码后发现的、ARCHITECTURE.md / CLAUDE.md 原文没预料到的偏差，已与 PM 逐条确认，写在这里作为后续所有 Step 的前提，不再逐一复述：
-
-1. **CSS 方案**：`static/style.css`（1001 行）实测是纯手写 CSS + `:root` CSS 变量（如 `--accent: #86351C`），**完全没有使用 Tailwind**——与 CLAUDE.md「必须复用...Tailwind 样式」的表述不符。既然「视觉 100% 还原」优先级更高，处理方式为：**迁移页（三步向导 + 结果卡 + 原子加载）原样复用 `style.css` 作为全局 CSS，一个类名都不改；只有本阶段新增的、没有旧 UI 可对照的页面（登录/注册、Guide 历史、贡献提交表单、管理员审核后台）使用 Tailwind**，在同一套 CSS 变量语汇下设计。ARCHITECTURE.md §1 技术栈表的 Tailwind 行按此口径理解。
-
-2. **路由方案**：ARCHITECTURE.md 原目录树按「单页向导」设计，没有规划路由库。Phase3 新增的 `/guide/{id}` 语义上就是「分享链接」，需要真实可分享的 URL；登录、历史、审核后台也更适合做成独立路径。因此引入 `react-router-dom`，目录树在 §2 基础上追加 `frontend/src/pages/` 存放路由级组件（向导本身挂在 `/`，不强制拆页面）。
-
-3. **贡献提交入口**：原 HTML 里「Join As a Contributor of AAF」按钮实际只调用了 `resetToForm()`（回到向导第一步），真实提交渠道是文案里提到的外部 Google Form（对应已从仓库删除的 `AAF_responses.csv`）。Phase3 新增了 `POST /contributions` 后端能力后，本阶段把这颗按钮改为跳转到站内新表单 `ContributionForm`，形成「提交 → 管理员审核 → 写入 ChromaDB」的完整闭环，不再依赖外部 Google Form。
-
-以下这点不是决策分歧，只是提前记录，避免执行到 Step 22 时才发现意外：
-
-- **`aafSubmitRating()` 的行为变化**：原实现只是把整行 DOM 换成感谢文案，从未调用过任何接口（当时 `ratings` 表还不存在）。本阶段会让它真实调用 `POST /ratings`——视觉上用户无感，但这是一次「从假交互到真交互」的行为补全，验收时需要专门用网络面板确认请求真的发出去了。
+> **Status**: Pending
+> **Prerequisite**: Phase 3 completed and `git commit`ed (history/detail routes, the contribution-review loop, rate limiting, and tests have all been verified; the backend API contract is frozen as of this phase — no further new/changed endpoints)
+> **Acceptance goal**: The standalone `frontend/` React 18 + Vite + TS project runs locally end-to-end; the original `templates/index.html`'s three-step wizard + result card + atom loading animation are 100% visually reproduced; the four feature areas — auth state, Guide history, senior-experience submission, and admin review — which already had backend capability from Phase 2/3 but never had a UI, get their frontend interfaces filled in during this phase
+> **Collaboration constraint**: Wait for confirmation before each step; after execution, wait for local tests to pass and a `git commit` before moving to the next step
 
 ---
 
-## 与 Phase 3 的边界对照
+## ⚠️ Architectural Decisions Already Confirmed with the PM (Must Read Before Executing)
 
-| 功能 | Phase 3 状态 | Phase 4 完成 |
+The following three points are deviations discovered during a code audit before starting this phase — ones that ARCHITECTURE.md / CLAUDE.md's original text didn't anticipate. They've been confirmed one by one with the PM, and are stated here as a precondition for all subsequent steps, not repeated individually below:
+
+1. **CSS approach**: `static/style.css` (1001 lines) turns out to be hand-written plain CSS + `:root` CSS variables (e.g. `--accent: #86351C`), with **no Tailwind used at all** — inconsistent with CLAUDE.md's wording of "must reuse ... Tailwind styles." Since "100% visual fidelity" takes higher priority, the approach is: **migrated pages (the three-step wizard + result card + atom loader) reuse `style.css` as-is as global CSS, without changing a single class name; only pages newly added in this phase with no legacy UI to match against (login/register, Guide history, contribution submission form, admin review backend) use Tailwind**, designed under the same CSS-variable vocabulary. The Tailwind row in ARCHITECTURE.md §1's tech-stack table should be understood under this framing.
+
+2. **Routing approach**: ARCHITECTURE.md's original directory tree was designed around a "single-page wizard" and didn't plan for a routing library. `/guide/{id}`, added in Phase 3, is semantically a "share link" and needs a genuinely shareable URL; login, history, and the review backend are also better suited to standalone paths. Therefore `react-router-dom` is introduced, and the directory tree adds `frontend/src/pages/` on top of §2 to hold route-level components (the wizard itself is mounted at `/`, without being forcibly split into separate pages).
+
+3. **Contribution-submission entry point**: in the original HTML, the "Join As a Contributor of AAF" button actually only called `resetToForm()` (returning to step 1 of the wizard) — the real submission channel was an external Google Form mentioned in the copy (corresponding to the already-deleted `AAF_responses.csv` in the repo). Now that Phase 3 has added the `POST /contributions` backend capability, this phase changes that button to navigate to a new in-app form, `ContributionForm`, forming the complete loop of "submit → admin review → write to ChromaDB," no longer depending on the external Google Form.
+
+The following point is not a decision disagreement — just recorded ahead of time to avoid an unpleasant surprise when reaching Step 22:
+
+- **Behavior change in `aafSubmitRating()`**: the original implementation only swapped the entire row's DOM for a thank-you message, and never actually called any endpoint (the `ratings` table didn't exist yet at that time). This phase makes it genuinely call `POST /ratings` — visually imperceptible to the user, but this is a "fake interaction becomes real interaction" behavioral completion, and acceptance testing needs to specifically use the network panel to confirm the request is actually being sent.
+
+---
+
+## Boundary Comparison with Phase 3
+
+| Feature | Phase 3 State | Phase 4 Completion |
 |---|---|---|
-| 前端工程 | 不存在 | `frontend/` 独立 React 18 + Vite + TS 工程 |
-| 视觉呈现 | 仅 Flask Jinja2 模板 `templates/index.html` | 100% 还原为 React 组件，原生 JS 逻辑等价迁移 |
-| Markdown 渲染 | 后端返回 Markdown 字符串，无消费方 | `react-markdown` 渲染，替代 CDN `marked.js` |
-| 认证态 UI | 无（仅 curl 测试过 API） | 登录/注册表单 + Token 存储与刷新（`useAuth.ts`） |
-| Guide 历史 UI | 无（仅 API） | 历史列表 `/history` + 详情页 `/guide/:id` |
-| 学长经验提交 UI | 无（仅 API + 外部 Google Form） | 站内表单 `/contribute`，替代外部 Google Form 入口 |
-| 管理员审核 UI | 无（仅 curl 测试过 API） | 审核后台 `/admin/contributions`（list/approve/reject） |
-| 满意度评分 | 前端假交互，从不调用 API | 真实调用 `POST /ratings` |
-| 本地跨域 | 未涉及（无前端） | Vite Dev Proxy 生效（ARCHITECTURE.md §3 策略 A） |
+| Frontend project | Does not exist | Standalone `frontend/` React 18 + Vite + TS project |
+| Visual presentation | Only the Flask Jinja2 template `templates/index.html` | 100% reproduced as React components, native JS logic migrated equivalently |
+| Markdown rendering | Backend returns a Markdown string, no consumer | Rendered via `react-markdown`, replacing the CDN `marked.js` |
+| Auth-state UI | None (API only tested via curl) | Login/register forms + token storage and refresh (`useAuth.ts`) |
+| Guide history UI | None (API only) | History list `/history` + detail page `/guide/:id` |
+| Senior-experience submission UI | None (API only + external Google Form) | In-app form `/contribute`, replacing the external Google Form entry point |
+| Admin review UI | None (API only tested via curl) | Review backend `/admin/contributions` (list/approve/reject) |
+| Satisfaction rating | Frontend fake interaction, never calls the API | Genuinely calls `POST /ratings` |
+| Local cross-origin handling | Not applicable (no frontend yet) | Vite dev proxy takes effect (ARCHITECTURE.md §3 Strategy A) |
 
 ---
 
-## 里程碑 A：前端工程骨架
+## Milestone A: Frontend Project Skeleton
 
-### Step 1 — 创建 `frontend/` 工程 + `package.json`
+### Step 1 — Create the `frontend/` project + `package.json`
 
 ```bash
 npm create vite@latest frontend -- --template react-ts
 ```
 
-追加依赖：`@tanstack/react-query`、`zustand`、`axios`、`react-markdown`、`react-router-dom`；开发依赖追加 `tailwindcss`、`postcss`、`autoprefixer`（仅用于净新增页面，见上文架构决策 1）。
+Add dependencies: `@tanstack/react-query`, `zustand`, `axios`, `react-markdown`, `react-router-dom`; add dev dependencies `tailwindcss`, `postcss`, `autoprefixer` (used only for net-new pages, see architectural decision 1 above).
 
 ### Step 2 — `frontend/vite.config.ts`
 
-按 ARCHITECTURE.md §3 策略 A 配置 dev proxy：
+Configure the dev proxy per ARCHITECTURE.md §3 Strategy A:
 
 ```ts
 server: {
@@ -61,11 +61,11 @@ server: {
 
 ### Step 3 — `frontend/tsconfig.json`
 
-追加 `@/*` 路径别名指向 `src/*`，与目录树里 `api/`、`components/`、`hooks/` 等子目录的 import 写法对齐。
+Add a `@/*` path alias pointing to `src/*`, aligned with the import style used by subdirectories like `api/`, `components/`, `hooks/` in the directory tree.
 
 ### Step 4 — `frontend/vercel.json`
 
-提前放好 SPA 回退配置（Phase5 部署时直接生效，避免遗漏）：
+Put the SPA fallback config in place ahead of time (takes effect immediately during Phase 5 deployment, avoiding it being forgotten):
 
 ```json
 { "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }] }
@@ -73,29 +73,29 @@ server: {
 
 ---
 
-## 里程碑 B：视觉资产迁移（严格 1:1，仅限迁移页）
+## Milestone B: Visual Asset Migration (Strict 1:1, Migrated Pages Only)
 
 ### Step 5 — `frontend/src/index.css`
 
-把 `static/style.css`（1001 行）原样搬入，类名、CSS 变量、媒体查询一个字节不改。
+Carry `static/style.css` (1001 lines) over as-is — not a single byte of class names, CSS variables, or media queries changed.
 
 ### Step 6 — `frontend/src/data/courses.ts`
 
-把 `templates/index.html` 里的 `UCI_COURSES`（含 `dept` 元数据，用于搜索框前缀/全名匹配）迁移为 TS 常量。
+Migrate `templates/index.html`'s `UCI_COURSES` (including the `dept` metadata used for search-box prefix/full-name matching) into a TS constant.
 
-> 注：不调用后端 `GET /courses`——那个端点只返回精简课程码列表（`backend/app/api/v1/routes/courses.py`），供其他/未来客户端使用；原搜索框依赖的 `dept` 元数据只存在于前端本地数据里，继续维护在 `courses.ts`。
+> Note: does not call the backend's `GET /courses` — that endpoint only returns a trimmed-down list of course codes (`backend/app/api/v1/routes/courses.py`), meant for other/future clients. The `dept` metadata the original search box relies on exists only in the frontend's local data, and continues to be maintained in `courses.ts`.
 
 ---
 
-## 里程碑 C：类型与 API 客户端层
+## Milestone C: Types and API Client Layer
 
 ### Step 7 — `frontend/src/types/index.ts`
 
-对齐所有 Pydantic Schema：`GuideRequest/Response`、`GuideHistoryItem/Response`、`LoginRequest/RegisterRequest/TokenResponse/UserResponse`、`RatingRequest/Response`、`ContributionRequest/Response`。
+Aligned with all Pydantic schemas: `GuideRequest/Response`, `GuideHistoryItem/Response`, `LoginRequest/RegisterRequest/TokenResponse/UserResponse`, `RatingRequest/Response`, `ContributionRequest/Response`.
 
 ### Step 8 — `frontend/src/api/client.ts`
 
-axios 实例：
+axios instance:
 
 ```ts
 const client = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL });
@@ -106,177 +106,184 @@ client.interceptors.request.use(cfg => {
 });
 ```
 
-响应拦截器：401 时尝试用 `refresh_token` 换新 `access_token` 重放一次；仍失败则清空 `authStore` 并跳转登录。
+Response interceptor: on 401, attempt to exchange `refresh_token` for a new `access_token` and retry once; if that still fails, clear `authStore` and redirect to login.
 
 ### Step 9 — `frontend/src/api/guide.ts`
 
-`generateGuide(req)` / `getGuideHistory(limit, offset)` / `getGuide(id)`。
+`generateGuide(req)` / `getGuideHistory(limit, offset)` / `getGuide(id)`.
 
 ### Step 10 — `frontend/src/api/auth.ts`
 
-`login()` / `register()` / `refresh()` / `logout()` / `me()`。
+`login()` / `register()` / `refresh()` / `logout()` / `me()`.
 
 ### Step 11 — `frontend/src/api/ratings.ts`
 
-`submitRating(guideId, score)`。
+`submitRating(guideId, score)`.
 
 ### Step 12 — `frontend/src/api/contributions.ts`
 
-`submitContribution(req)` / `listPendingContributions()` / `approveContribution(id)` / `rejectContribution(id)`。
+`submitContribution(req)` / `listPendingContributions()` / `approveContribution(id)` / `rejectContribution(id)`.
 
 ---
 
-## 里程碑 D：状态管理
+## Milestone D: State Management
 
 ### Step 13 — `frontend/src/store/wizardStore.ts`
 
-Zustand，字段对齐原生 JS 全局状态：`currentStep`、`role`、`courses: string[]`、`otherSelectedCourses: Set<string>`、`confidence`、`goals/expertise: string[]`、`userQuery`。
+Zustand, fields aligned with the original vanilla-JS global state: `currentStep`, `role`, `courses: string[]`, `otherSelectedCourses: Set<string>`, `confidence`, `goals/expertise: string[]`, `userQuery`.
 
 ### Step 14 — `frontend/src/store/authStore.ts`
 
-`accessToken` / `refreshToken` / `user`，用 `persist` middleware 落到 `localStorage`（键名加前缀避免冲突，如 `aaf_auth`）。
+`accessToken` / `refreshToken` / `user`, persisted to `localStorage` via the `persist` middleware (key name prefixed to avoid collisions, e.g. `aaf_auth`).
 
 ---
 
-## 里程碑 E：原子 UI 组件迁移（1:1 视觉）
+## Milestone E: Atomic UI Component Migration (1:1 Visual)
 
 ### Step 15 — `frontend/src/components/ui/AtomLoader.tsx`
 
-原样迁移 SVG（`glow-nucleus`/`glow-orbit`/`glow-electron` 三个 filter + 三条 `animateMotion` 轨道），不做任何简化。
+Migrate the SVG as-is (the three filters `glow-nucleus`/`glow-orbit`/`glow-electron` + three `animateMotion` orbit paths), with no simplification whatsoever.
 
 ### Step 16 — `frontend/src/components/ui/ProgressBar.tsx`
 
-进度条 + 三个 step-label，`active` class 切换逻辑迁移自 `updateProgress()`。
+Progress bar + three step-labels; the `active` class-toggling logic migrated from `updateProgress()`.
 
 ### Step 17 — `frontend/src/components/ui/CourseChip.tsx`
 
-课程标签卡片，`checked` 状态受控于 `wizardStore`，替代原生 `classList.toggle('selected', ...)`。
+Course tag card; the `checked` state is controlled by `wizardStore`, replacing the native `classList.toggle('selected', ...)`.
 
 ---
 
-## 里程碑 F：向导步骤组件迁移
+## Milestone F: Wizard Step Component Migration
 
 ### Step 18 — `frontend/src/components/wizard/StepIdentity.tsx`
 
-角色卡片（student/senior），selected/dimmed 切换逻辑迁移自 `goNext(1)` 里 role 分支那段（含切换身份清空 `user_query` 的副作用）。
+Role cards (student/senior); the selected/dimmed toggling logic migrated from the role branch inside `goNext(1)` (including the side effect of clearing `user_query` when switching identity).
 
 ### Step 19 — `frontend/src/components/wizard/StepCourses.tsx`
 
-课程网格 + division tabs（all/lower/upper）+ 搜索框（dropdown/tags/自定义课程），`handleOtherSearch`/`selectOtherCourse`/`removeOtherCourse` 迁移为组件内 state，逻辑与原版完全等价。
+Course grid + division tabs (all/lower/upper) + search box (dropdown/tags/custom course); `handleOtherSearch`/`selectOtherCourse`/`removeOtherCourse` migrated into in-component state, with logic fully equivalent to the original.
 
 ### Step 20 — `frontend/src/components/wizard/StepGoals.tsx`
 
-置信度滑杆（`confidence`，学生模式显示）+ goal/expertise chips + `user_query` textarea。`placeholders`/`seniorPlaceholders`/`comboPlaceholders` 三套映射表迁移为常量，`updatePlaceholder()` 逻辑等价迁移。
+Confidence slider (`confidence`, shown in student mode) + goal/expertise chips + `user_query` textarea. The three mapping tables `placeholders`/`seniorPlaceholders`/`comboPlaceholders` migrated as constants; `updatePlaceholder()` logic migrated equivalently.
 
 ---
 
-## 里程碑 G：结果展示组件迁移
+## Milestone G: Result Display Component Migration
 
 ### Step 21 — `frontend/src/components/result/GuideCard.tsx`
 
-`react-markdown` 渲染 `guide_markdown`，替代 CDN `marked.js`；保留原表格样式（`style.css` 里 `#aafBody table` 相关规则已在 Step5 一并迁入）。
+`react-markdown` renders `guide_markdown`, replacing the CDN `marked.js`; the original table styling is preserved (the `#aafBody table`-related rules in `style.css` were already migrated together in Step 5).
 
 ### Step 22 — `frontend/src/components/result/ExportMenu.tsx`
 
-「more...」弹出菜单：Add to Calendar（生成 `.ics` blob）/ Download as PDF（打印窗口）/ Export for Google Docs（`.html` blob）/ Share（`navigator.share` 或剪贴板降级）。`injectTableActions()` 里的四段逻辑原样迁移为 TS 函数。
+The "more..." popover menu: Add to Calendar (generates a `.ics` blob) / Download as PDF (print window) / Export for Google Docs (`.html` blob) / Share (`navigator.share` or clipboard fallback). The four logic blocks inside `injectTableActions()` migrated as-is into TS functions.
 
 ### Step 23 — `frontend/src/components/result/RatingBar.tsx`
 
-Emoji 评分，`aafRate()` 的选中态迁移为组件 state；`aafSubmitRating()` 改为真实调用 `api/ratings.ts` 的 `submitRating()`，成功后再展示感谢文案（对照上文「已提前记录」的行为变化说明）。
+Emoji rating; `aafRate()`'s selected state migrated into component state; `aafSubmitRating()` changed to genuinely call `submitRating()` from `api/ratings.ts`, showing the thank-you message only after success (see the "recorded ahead of time" behavior-change note above).
 
 ---
 
-## 里程碑 H：数据请求 Hook 与主流程组装
+## Milestone H: Data-Fetching Hooks and Main Flow Assembly
 
 ### Step 24 — `frontend/src/hooks/useGuide.ts`
 
-TanStack Query `useMutation` 封装 `generateGuide`，替代原 `fetch + DOMParser` 那段 AJAX；`isPending` 驱动 `AtomLoader` 显隐，替代 `startAtom()/stopAtom()`。
+TanStack Query's `useMutation` wraps `generateGuide`, replacing the original `fetch + DOMParser` AJAX section; `isPending` drives `AtomLoader`'s visibility, replacing `startAtom()/stopAtom()`.
 
 ### Step 25 — `frontend/src/App.tsx` + `main.tsx`
 
-`QueryClientProvider` + `BrowserRouter` 包裹；`/` 路由挂三步向导 + 结果卡（`wizardStore.currentStep` 驱动 `StepIdentity`/`StepCourses`/`StepGoals`/`GuideCard` 切换，替代原生 `classList.add('hidden')`）。
+Wrapped in `QueryClientProvider` + `BrowserRouter`; the `/` route mounts the three-step wizard + result card (`wizardStore.currentStep` drives switching between `StepIdentity`/`StepCourses`/`StepGoals`/`GuideCard`, replacing the native `classList.add('hidden')`).
 
 ---
 
-## 里程碑 I（净新增）：认证 UI
+## Milestone I (Net New): Auth UI
 
 ### Step 26 — `frontend/src/hooks/useAuth.ts`
 
-封装 login/register/logout/me；401 时的自动 refresh 逻辑已在 Step8 的拦截器里做了，这里只暴露 `isAuthenticated`/`user`/`login()`/`logout()` 给组件用。
+Wraps login/register/logout/me; the automatic refresh-on-401 logic is already handled in Step 8's interceptor — this only exposes `isAuthenticated`/`user`/`login()`/`logout()` for components to use.
 
 ### Step 27 — `frontend/src/pages/LoginPage.tsx` + `RegisterPage.tsx`
 
-Tailwind 实现（无旧 UI 可对照），沿用 `style.css` 里的 `--accent` 等 CSS 变量保持视觉语汇一致，不追求逐像素还原。
+Implemented with Tailwind (no legacy UI to match against); reuses CSS variables like `--accent` from `style.css` to keep the visual vocabulary consistent, without pursuing pixel-perfect reproduction.
 
 ---
 
-## 里程碑 J（净新增）：Guide 历史页
+## Milestone J (Net New): Guide History Page
 
 ### Step 28 — `frontend/src/pages/GuideHistoryPage.tsx`
 
-登录后可见，消费 `GET /guide/history`，点击条目跳转 `/guide/:id`。
+Visible once logged in; consumes `GET /guide/history`; clicking an item navigates to `/guide/:id`.
 
 ### Step 29 — `frontend/src/pages/GuideDetailPage.tsx`
 
-消费 `GET /guide/{id}`（匿名可访问，真正的分享链接），复用 `GuideCard` 渲染。
+Consumes `GET /guide/{id}` (anonymous access, a genuine share link); reuses `GuideCard` for rendering.
 
 ---
 
-## 里程碑 K（净新增）：学长经验提交表单
+## Milestone K (Net New): Senior-Experience Submission Form
 
 ### Step 30 — `frontend/src/pages/ContributePage.tsx`
 
-对接 `POST /contributions`；`StepIdentity.tsx` 里 senior 分支下、结果卡里的「Join As a Contributor of AAF」按钮改为 `navigate('/contribute')`（替代原来的 `resetToForm()`）。
+Wired to `POST /contributions`; the "Join As a Contributor of AAF" button — under the senior branch in `StepIdentity.tsx` and in the result card — changes to `navigate('/contribute')` (replacing the original `resetToForm()`).
 
 ---
 
-## 里程碑 L（净新增）：管理员审核后台
+## Milestone L (Net New): Admin Review Backend
 
 ### Step 31 — `frontend/src/pages/AdminContributionsPage.tsx`
 
-`useAuth` 判断 `user.role === 'admin'` 才展示入口（纯 UX 遮罩，真正权限仍由后端 `require_admin` 的 403 把关）；列表 + approve/reject 按钮，对接里程碑 C 的 `contributions.ts`。
+`useAuth` checks `user.role === 'admin'` before showing the entry point (a pure UX mask — the real permission gate remains the backend's `require_admin` 403); list + approve/reject buttons, wired to Milestone C's `contributions.ts`.
 
 ---
 
-## 阶段验收测试
+## Phase Acceptance Tests
 
-后端沿用 Phase3 的 `uvicorn --reload`；前端 `cd frontend && npm run dev`，浏览器访问 `http://localhost:5173`，手动走查（本阶段不引入 Vitest/Playwright，除非 PM 后续要求，遵循不过度设计原则）：
+The backend continues to use Phase 3's `uvicorn --reload`; for the frontend, `cd frontend && npm run dev`, then visit `http://localhost:5173` in the browser and walk through it manually (this phase does not introduce Vitest/Playwright unless the PM later requests it, following the principle of not over-engineering):
 
 ```
-1. 视觉 diff：并排打开旧 templates/index.html（需临时起 Flask 或直接开本地文件）与新 localhost:5173，
-   核对向导三步、进度条、course chip 选中态、原子加载动画、结果卡表格样式逐屏一致。
+1. Visual diff: open the old templates/index.html side by side (either temporarily start Flask or just
+   open the local file) with the new localhost:5173, and check screen-by-screen that the wizard's three
+   steps, progress bar, course-chip selected state, atom loading animation, and result-card table styling
+   all match.
 
-2. Student 全流程：选 student → 选课 → 填置信度/目标/自由文本 → 提交 → 看到真实 Guide → 打分（打开
-   Network 面板确认 POST /api/v1/ratings 真的发出并返回 201）→ more... 菜单四个导出功能逐个点一遍。
+2. Full student flow: choose student → pick courses → fill in confidence/goals/free text → submit →
+   see a real Guide → rate it (open the Network panel to confirm POST /api/v1/ratings is genuinely sent
+   and returns 201) → click through all four export functions in the "more..." menu one by one.
 
-3. Senior 全流程：选 senior → 选课 → 提交 → 结果卡里点击 "Join As a Contributor of AAF" →
-   确认跳转到 /contribute 而不是回到向导第一步 → 填表提交 → 确认 201。
+3. Full senior flow: choose senior → pick courses → submit → click "Join As a Contributor of AAF" in
+   the result card → confirm it navigates to /contribute instead of returning to step 1 of the wizard →
+   fill out and submit the form → confirm 201.
 
-4. 登录闭环：/register 建号 → /login 拿 token → 刷新页面确认登录态不丢（localStorage 生效）→
-   /history 能看到匿名生成之外、登录后生成的 Guide → 点条目跳 /guide/:id 能看到详情。
+4. Login loop: create an account at /register → get a token at /login → refresh the page and confirm
+   login state isn't lost (localStorage working) → /history shows Guides generated while logged in, in
+   addition to any generated anonymously → clicking an item navigates to /guide/:id and shows the detail.
 
-5. 匿名分享链接：不登录直接访问某个已知 guide_id 的 /guide/:id，确认能看到内容（Optional 鉴权语义）。
+5. Anonymous share link: without logging in, visit /guide/:id for a known guide_id directly, and confirm
+   the content is visible (Optional-auth semantics).
 
-6. 管理员审核闭环：把测试账号 role 手动改成 admin（Supabase）→ 登录 → 能看到 /admin/contributions
-   入口 → 看到第3步提交的记录 → approve → 确认 ChromaDB 侧数据可被下一次 generate 检索到
-   （检索 tip 里含刚才提交的文本片段）。
+6. Admin review loop: manually change a test account's role to admin (in Supabase) → log in → confirm
+   the /admin/contributions entry point is visible → see the record submitted in step 3 → approve it →
+   confirm the ChromaDB-side data can be retrieved by the next generate call (the retrieved tip contains
+   the text snippet just submitted).
 
-7. 非 admin 用户访问 /admin/contributions：前端隐藏入口，若强行改 URL 访问，后端 403 应体现为
-   页面上的错误提示而不是白屏崩溃。
+7. Non-admin user visits /admin/contributions: the frontend hides the entry point; if the URL is forced
+   directly, the backend's 403 should surface as an on-page error message, not a blank-screen crash.
 ```
 
 ---
 
-## 与 Phase 5 的边界
+## Boundary with Phase 5
 
-| 功能 | Phase 4 状态 | Phase 5 完成 |
+| Feature | Phase 4 State | Phase 5 Completion |
 |---|---|---|
-| 前端工程 | 本地 `npm run dev` 可跑通，未部署 | Vercel 生产部署，`vercel.json` 生效 |
-| 后端部署 | 本地 `uvicorn --reload`，未部署 | Render 生产部署，`render.yaml` 生效 |
-| CORS | 本地 `.env` 只含 `http://localhost:5173` | 补充生产 `ALLOWED_ORIGINS`（Vercel 域名，无通配符） |
-| 环境变量 | 本地 `.env`/`.env.example` | Render/Vercel 控制台环境变量核对清单 |
-| 端到端验收 | 仅本地手动走查 | 生产域名下完整冒烟测试（向导 + 登录 + 历史 + 审核全走一遍） |
+| Frontend project | Runs locally via `npm run dev`, not deployed | Vercel production deployment, `vercel.json` in effect |
+| Backend deployment | Local `uvicorn --reload`, not deployed | Render production deployment, `render.yaml` in effect |
+| CORS | Local `.env` only contains `http://localhost:5173` | Production `ALLOWED_ORIGINS` added (Vercel domain, no wildcard) |
+| Environment variables | Local `.env`/`.env.example` | Render/Vercel console environment-variable checklist |
+| End-to-end acceptance | Manual local walkthrough only | Full smoke test under the production domain (wizard + login + history + review, all walked through) |
 
 ---
 
-*本文件由架构师生成，代码实施须严格遵循 ARCHITECTURE.md 中的目录结构与接口契约；本阶段涉及的三项架构决策（CSS 方案 / 路由方案 / 贡献提交入口）已与 PM 确认，详见文首。每步执行前必须等待 PM 确认。*
+*This file was generated by the architect. Code implementation must strictly follow the directory structure and interface contracts in ARCHITECTURE.md; the three architectural decisions involved in this phase (CSS approach / routing approach / contribution-submission entry point) have already been confirmed with the PM, see the top of this document. Each step must wait for PM confirmation before execution.*
